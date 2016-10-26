@@ -1,0 +1,16 @@
+{
+  "name": "Chrome Debugger Extension for Lively4",
+  "version": "0.0.1",
+  "description": "Debugging tools for the Lively4 programming environment.",
+  "devtools_page": "devtools.html",
+  "permissions": ["tabs"],
+   "background": {
+    "scripts": ["background.js"]
+  },
+  "icons": {
+    "16": "img/logo16.png",
+    "48": "img/logo48.png",
+    "128": "img/logo128.png"
+  },
+  "manifest_version": 2
+}
