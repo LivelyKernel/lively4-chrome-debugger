@@ -4,7 +4,7 @@ function Lively4ChromeDebugger() {
     this.SidebarPane = chrome.devtools.panels.elements.createSidebarPane("Lively4", function(sidebar) {
         var modules = () => lively.modules.getPackages().map((ea) =>
             ({name: ea.name, main: ea.main}));
-        exec(moduls, (result, isException) => {
+        exec(modules, (result, isException) => {
             var data;
             if (!isException) {
                 data = result;
@@ -13,7 +13,7 @@ function Lively4ChromeDebugger() {
                 data = isException;
             }
             sidebar.setObject(data);
-        })
+        });
     });
 }
 
