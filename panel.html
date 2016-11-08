@@ -1,12 +1,22 @@
 <html>
+<head>
+  <link rel="stylesheet" type="text/css" href="css/panel.css">
+</head>
 <body>
+<template id="window-overview-template">
+</template>
+<template id="testing-template">
+  <button id="open-sync-window">Open Sync Window</button>
+</template>
+<div id="nav">
+  <button id="window-overview" class="nav-button">Window Overview</a>
+  <button id="testing" class="nav-button selected">Testing</a>
+</div>
+<div id="main">
+  <button id="open-sync-window">Open Sync Window</button>
+</div>
 
-<h1>Hello Lively4</h1>
-
-Is Lively4 page: <span id="lively-detected"></span>
-
-<button id="services">Open Services</button>
-
+<script src="js/utils.js"></script>
 <script src="js/panel.js"></script>
 </body>
 </html>
