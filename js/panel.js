@@ -1,43 +1,53 @@
 function Lively4Panel() {
     this.backgroundPageConnection = chrome.runtime.connect({
-    	name: "panel"
+        name: 'panel'
     });
 
     this.backgroundPageConnection.postMessage({
-    	name: 'init',
-    	tabId: chrome.devtools.inspectedWindow.tabId
+        name: 'init',
+        tabId: chrome.devtools.inspectedWindow.tabId
     });
 
-    this.registerOpenSync();
     this._registerNavButtons();
 }
 
 Lively4Panel.prototype = {
-	registerOpenSync: function()
-	{
-		document.getElementById("open-sync-window").addEventListener("click", function() {
-    		exec(() => lively.openComponentInWindow('lively-sync'));
-    	});
-	},
+    _initializers: {
+        testing: function() {
+            document.getElementById('open-sync-window').addEventListener('click', function() {
+                exec(() => lively.openComponentInWindow('lively-sync'));
+            });
+        }
+    },
 
-	_registerNavButtons: function()
-	{
-		var navButtons = document.getElementsByClassName("nav-button");
+    _initTemplate(templateId) {
+        var content = document.querySelector('#' + templateId + '-template');
+        var main = document.querySelector('#main');
+        var clone = document.importNode(content.content, true);
+        main.innerHTML = '';
+        main.appendChild(clone);
+        var cb = Lively4Panel.prototype._initializers[templateId];
+        if (cb) cb();
+    },
 
-		for (var i = 0; i < navButtons.length; i++) {
-  			navButtons[i].addEventListener("click", function() {
-    			var oldSelection = document.getElementsByClassName("selected");
-    			oldSelection[0].className = "nav-button";
-    			this.className += " selected";
+    _registerNavButtons: function() {
+        var navButtons = document.getElementsByClassName('nav-button');
 
-    			var content = document.querySelector("#" + this.id + "-template");
-    			var main = document.querySelector("#main");
-    			var clone = document.importNode(content.content, true);
-    			main.innerHTML = "";
-  				main.appendChild(clone);
-  			});
-		}
-	}
+        var clickHandler = function() {
+            var oldSelection = document.getElementsByClassName('selected')[0];
+            oldSelection.classList.remove('selected');
+            this.classList.add('selected');
+
+            Lively4Panel.prototype._initTemplate(this.id);
+        };
+
+        for (var i = 0; i < navButtons.length; i++) {
+            navButtons[i].addEventListener('click', clickHandler.bind(navButtons[i]));
+        }
+
+        var initButton = document.getElementsByClassName('selected')[0];
+        this._initTemplate(initButton.id);
+    }
 };
 
 var lively4Panel = new Lively4Panel();
