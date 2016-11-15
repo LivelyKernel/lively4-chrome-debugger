@@ -13,28 +13,26 @@ function Lively4ChromeDebugger() {
                 data = isException;
             }
             sidebar.setObject(data);
-        });
+        })
     });
 }
 
 /* global chrome */
-var panelCreated = false;
-var lively4ChromeDebugger = {};
+var lively4ChromeDebugger = null;
 var checkForLively4Interval = setInterval(function() {
     createPanelIfLivelyPageFound();
 }, 3000);
 
 function createPanelIfLivelyPageFound() {
-  if (panelCreated) {
+  if (lively4ChromeDebugger) {
     return;
   }
 
   exec(() => lively !== undefined, (isLivelyPage, err) => {
-    if (!isLivelyPage || panelCreated) {
+    if (!isLivelyPage || lively4ChromeDebugger) {
       return;
     }
 
-    panelCreated = true;
     lively4ChromeDebugger = new Lively4ChromeDebugger();
   });
 }

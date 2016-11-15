@@ -3,14 +3,25 @@
   "version": "0.0.1",
   "description": "Debugging tools for the Lively4 programming environment.",
   "devtools_page": "devtools.html",
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "<all_urls>"],
    "background": {
     "scripts": ["background.js"]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+        ],
+      "js": ["js/contentscript.js"],
+      "run_at": "document_end"
+    }
+  ], 
   "icons": {
     "16": "img/logo16.png",
     "48": "img/logo48.png",
     "128": "img/logo128.png"
   },
+  "web_accessible_resources": ["js/script.js"],
   "manifest_version": 2
 }
