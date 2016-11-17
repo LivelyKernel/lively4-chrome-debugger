@@ -1,9 +1,4 @@
-//this.port.onMessage.addListener(callFunction.bind(this));
-    chrome.runtime.onConnect.addListener(function (port) {
-        alert('test');
-    });
-
-function Lively4ChromeDebugger() {
+function Lively4ChromeDebuggerExtension() {
     this.Panel = chrome.devtools.panels.create("Lively4", "/img/logo.png", "/panel.html");
 
     this.SidebarPane = chrome.devtools.panels.elements.createSidebarPane("Lively4", function(sidebar) {
@@ -22,31 +17,33 @@ function Lively4ChromeDebugger() {
     });
 
     this.port = chrome.runtime.connect({name: "livel4chromebackend"});
-    this.port.onMessage.addListener(callFunction.bind(this));
+    this.port.onMessage.addListener(this.callFunction.bind(this));
 }
 
-function callFunction(message) {
-    var value = eval(message.code);
-    this.port.postMessage({result: value});
-}
+Lively4ChromeDebuggerExtension.prototype = {
+    callFunction (message) {
+        var value = eval(message.code);
+        this.port.postMessage({result: value});
+    }
+};
 
 /* global chrome */
-var lively4ChromeDebugger = null;
+var lively4ChromeDebuggerExtension = null;
 var checkForLively4Interval = setInterval(function() {
     createPanelIfLivelyPageFound();
 }, 3000);
 
 function createPanelIfLivelyPageFound() {
-  if (lively4ChromeDebugger) {
+  if (lively4ChromeDebuggerExtension) {
     return;
   }
 
   exec(() => lively !== undefined, (isLivelyPage, err) => {
-    if (!isLivelyPage || lively4ChromeDebugger) {
+    if (!isLivelyPage || lively4ChromeDebuggerExtension) {
       return;
     }
 
-    lively4ChromeDebugger = new Lively4ChromeDebugger();
+    lively4ChromeDebuggerExtension = new Lively4ChromeDebuggerExtension();
   });
 }
 
