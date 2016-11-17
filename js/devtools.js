@@ -1,3 +1,8 @@
+//this.port.onMessage.addListener(callFunction.bind(this));
+    chrome.runtime.onConnect.addListener(function (port) {
+        alert('test');
+    });
+
 function Lively4ChromeDebugger() {
     this.Panel = chrome.devtools.panels.create("Lively4", "/img/logo.png", "/panel.html");
 
@@ -15,6 +20,14 @@ function Lively4ChromeDebugger() {
             sidebar.setObject(data);
         })
     });
+
+    this.port = chrome.runtime.connect({name: "livel4chromebackend"});
+    this.port.onMessage.addListener(callFunction.bind(this));
+}
+
+function callFunction(message) {
+    var value = eval(message.code);
+    this.port.postMessage({result: value});
 }
 
 /* global chrome */
