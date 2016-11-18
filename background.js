@@ -4,8 +4,12 @@ var ports = {};
 chrome.runtime.onConnect.addListener(function (port) {
     if (!ports[port.name]) {
         ports[port.name] = port;
+
+        port.onDisconnect.addListener(function(event) {
+            delete ports[port.name];
+        });
     }
-    
+
     if (port.name == "livel4chromeextension") {
         port.onMessage.addListener(function (message, sender) {
             ports["livel4chromebackend"].postMessage(message);
