@@ -9,7 +9,10 @@ function Lively4Panel() {
     });
 
     this._registerNavButtons();
+    this._registerDraggableBar();
 }
+
+var moveMouse = false;
 
 Lively4Panel.prototype = {
     _initializers: {
@@ -28,6 +31,37 @@ Lively4Panel.prototype = {
         main.appendChild(clone);
         var cb = Lively4Panel.prototype._initializers[templateId];
         if (cb) cb();
+    },
+
+    _registerDraggableBar() {
+        var bar = document.querySelector('#drag-n-drop');
+        var nav = document.querySelector('#nav');
+        var main = document.querySelector('#main');
+
+        document.addEventListener('mousedown', function(event) {
+            var barRect = bar.getBoundingClientRect();
+            if (barRect.top <= event.clientY && barRect.bottom >= event.clientY &&
+                barRect.left <= event.clientX && barRect.right >= event.clientX) {
+                moveMouse = true;
+                // Prevents unintented behavior for drag over
+                event.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', function() {
+            if (moveMouse) {
+                nav.style.width = event.clientX;
+                main.style.width = (document.body.clientWidth - parseInt(nav.style.width,10)) + "px";
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            moveMouse = false;
+        });
+
+        document.addEventListener('mouseleave', function() {
+            moveMouse = false;
+        });
     },
 
     _registerNavButtons: function() {
