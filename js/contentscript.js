@@ -1,5 +1,3 @@
-'use strict';
-
 class Lively4ContentScript {
     constructor() {
         this.injectScriptIntoWebsite();

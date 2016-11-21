@@ -1,42 +1,63 @@
-function Lively4Panel() {
-    this.backgroundPageConnection = chrome.runtime.connect({
-        name: 'panel'
-    });
+class Lively4Panel {
+    constructor() {
+        this.backgroundPageConnection = chrome.runtime.connect({
+            name: 'panel'
+        });
 
-    this.backgroundPageConnection.postMessage({
-        name: 'init',
-        tabId: chrome.devtools.inspectedWindow.tabId
-    });
+        this.backgroundPageConnection.postMessage({
+            name: 'init',
+            tabId: chrome.devtools.inspectedWindow.tabId
+        });
+        Lively4Panel._initializers = {
+            testing: function() {
+                document.getElementById('open-sync-window').addEventListener('click', function() {
+                    exec(() => lively.openComponentInWindow('lively-sync'));
+                });
+            }
+        };
 
-    this._registerNavButtons();
-    this._registerDraggableBar();
-}
+        this._registerNavButtons();
+        this._registerDraggableBar();
+        this.evalLog = null;
 
-var moveMouse = false;
+        this.port = chrome.runtime.connect({name: "livel4chromepanel"});
+        this.port.onMessage.addListener(this.callFunction.bind(this));
+    }
 
-Lively4Panel.prototype = {
-    _initializers: {
-        testing: function() {
-            document.getElementById('open-sync-window').addEventListener('click', function() {
-                exec(() => lively.openComponentInWindow('lively-sync'));
+    callFunction (message) {
+        this.evalLog = message.evalLog;
+        var evalLogTemplate = document.querySelector('#eval-log-template');
+        var evalLog = document.querySelector('#eval-log');
+        evalLogTemplate.innerHTML = '';
+
+        if (this.evalLog) {
+            this.evalLog.forEach(function(entry) {
+                evalLogTemplate.innerHTML = evalLogTemplate.innerHTML + entry + '<br>';
             });
         }
-    },
 
-    _initTemplate(templateId) {
+        if (evalLog.classList.contains('selected')) {
+            var clone = document.importNode(evalLogTemplate.content, true);
+            main.innerHTML = '';
+            main.appendChild(clone);
+        }
+    }
+
+    static _initTemplate(templateId) {
         var content = document.querySelector('#' + templateId + '-template');
         var main = document.querySelector('#main');
         var clone = document.importNode(content.content, true);
         main.innerHTML = '';
         main.appendChild(clone);
-        var cb = Lively4Panel.prototype._initializers[templateId];
+        var cb = Lively4Panel._initializers[templateId];
         if (cb) cb();
-    },
+    }
 
     _registerDraggableBar() {
         var bar = document.querySelector('#drag-n-drop');
         var nav = document.querySelector('#nav');
         var main = document.querySelector('#main');
+        var moveMouse = false;
 
         document.addEventListener('mousedown', function(event) {
             var barRect = bar.getBoundingClientRect();
@@ -62,17 +83,16 @@ Lively4Panel.prototype = {
         document.addEventListener('mouseleave', function() {
             moveMouse = false;
         });
-    },
+    }
 
-    _registerNavButtons: function() {
+    _registerNavButtons() {
         var navButtons = document.getElementsByClassName('nav-button');
 
         var clickHandler = function() {
             var oldSelection = document.getElementsByClassName('selected')[0];
             oldSelection.classList.remove('selected');
             this.classList.add('selected');
-
-            Lively4Panel.prototype._initTemplate(this.id);
+            Lively4Panel._initTemplate(this.id);
         };
 
         for (var i = 0; i < navButtons.length; i++) {
@@ -80,8 +100,8 @@ Lively4Panel.prototype = {
         }
 
         var initButton = document.getElementsByClassName('selected')[0];
-        this._initTemplate(initButton.id);
+        Lively4Panel._initTemplate(initButton.id);
     }
-};
+}
 
 var lively4Panel = new Lively4Panel();

@@ -1,5 +1,3 @@
-'use strict';
-
 class Lively4ChromeDebugger {
 	constructor() {
 		this.lastResult = null;

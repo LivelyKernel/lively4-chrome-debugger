@@ -1,5 +1,6 @@
 var connections = {};
 var ports = {};
+var messageLog = new Array();
 
 chrome.runtime.onConnect.addListener(function (port) {
     if (!ports[port.name]) {
@@ -18,6 +19,11 @@ chrome.runtime.onConnect.addListener(function (port) {
     } else if (port.name == "livel4chromebackend") {
         port.onMessage.addListener(function (message, sender) {
             ports["livel4chromeextension"].postMessage(message);
+            messageLog.push(message.messageCode);
+
+            if (ports["livel4chromepanel"]) {
+                ports["livel4chromepanel"].postMessage({evalLog: messageLog});
+            }
         });
     } else {
         var extensionListener = function (message, sender, sendResponse) {
@@ -54,11 +60,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       var tabId = sender.tab.id;
       if (tabId in connections) {
         connections[tabId].postMessage(request);
-      } else {
-        console.log("Tab not found in connection list.");
       }
-    } else {
-      console.log("sender.tab not defined.");
     }
+
     return true;
 });

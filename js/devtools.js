@@ -1,31 +1,31 @@
-function Lively4ChromeDebuggerExtension() {
-    this.Panel = chrome.devtools.panels.create("Lively4", "/img/logo.png", "/panel.html");
+class Lively4ChromeDebuggerExtension {
+    constructor() {
+        this.panel = chrome.devtools.panels.create("Lively4", "/img/logo.png", "/panel.html");
 
-    this.SidebarPane = chrome.devtools.panels.elements.createSidebarPane("Lively4", function(sidebar) {
-        var modules = () => lively.modules.getPackages().map((ea) =>
-            ({name: ea.name, main: ea.main}));
-        exec(modules, (result, isException) => {
-            var data;
-            if (!isException) {
-                data = result;
-            }
-            else {
-                data = isException;
-            }
-            sidebar.setObject(data);
-        })
-    });
+        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane("Lively4", function(sidebar) {
+            var modules = () => lively.modules.getPackages().map((ea) =>
+                ({name: ea.name, main: ea.main}));
+            exec(modules, (result, isException) => {
+                var data;
+                if (!isException) {
+                    data = result;
+                }
+                else {
+                    data = isException;
+                }
+                sidebar.setObject(data);
+            });
+        });
 
-    this.port = chrome.runtime.connect({name: "livel4chromebackend"});
-    this.port.onMessage.addListener(this.callFunction.bind(this));
-}
+        this.port = chrome.runtime.connect({name: "livel4chromebackend"});
+        this.port.onMessage.addListener(this.callFunction.bind(this));
+    }
 
-Lively4ChromeDebuggerExtension.prototype = {
     callFunction (message) {
         var value = eval(message.code);
-        this.port.postMessage({result: value});
+        this.port.postMessage({result: value, messageCode: message.code});
     }
-};
+}
 
 /* global chrome */
 var lively4ChromeDebuggerExtension = null;
