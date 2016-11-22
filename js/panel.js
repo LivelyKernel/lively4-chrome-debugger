@@ -9,6 +9,16 @@ class Lively4Panel {
             tabId: chrome.devtools.inspectedWindow.tabId
         });
         Lively4Panel._initializers = {
+            network: function() {
+                if (lively4Panel.requestLogInterval) return;
+                lively4Panel.requestLogInterval = setInterval(() => {
+                    let networkList = document.getElementsByClassName('network-list');
+                    for (let i = 0; i < networkList.length; i++) {
+                        networkList[i].innerHTML = '';
+                        networkList[i].appendChild(lively4Panel.networkContent());
+                    }
+                }, 1000);
+            },
             testing: function() {
                 document.getElementById('open-sync-window').addEventListener('click', function() {
                     exec(() => lively.openComponentInWindow('lively-sync'));
@@ -19,6 +29,12 @@ class Lively4Panel {
         this._registerNavButtons();
         this._registerDraggableBar();
         this.evalLog = null;
+        this.requestLog = [];
+        this.requestLogInterval = null;
+
+        chrome.devtools.network.onRequestFinished.addListener(request => {
+            lively4Panel.requestLog.push(request);
+        });
 
         this.port = chrome.runtime.connect({name: "livel4chromepanel"});
         this.port.onMessage.addListener(this.callFunction.bind(this));
@@ -101,6 +117,38 @@ class Lively4Panel {
 
         var initButton = document.getElementsByClassName('selected')[0];
         Lively4Panel._initTemplate(initButton.id);
+    }
+
+    networkContent() {
+        let table = document.createElement('table');
+        table.classList.add('panel-table');
+        let thead = document.createElement('thead');
+        let theadrow = document.createElement('tr');
+        theadrow.appendChild(lively4Panel._newCell('URL'));
+        theadrow.appendChild(lively4Panel._newCell('Method'));
+        theadrow.appendChild(lively4Panel._newCell('Time'));
+        theadrow.appendChild(lively4Panel._newCell('Response Status'));
+        thead.appendChild(theadrow);
+        table.appendChild(thead);
+        let tbody = document.createElement('tbody');
+        this.requestLog.forEach(function(request) {
+            let row = document.createElement('tr');
+            row.classList.add('table-row');
+            row.appendChild(lively4Panel._newCell(request.request.url));
+            row.appendChild(lively4Panel._newCell(request.request.method));
+            row.appendChild(lively4Panel._newCell(Math.round(request.time) + 'ms'));
+            row.appendChild(lively4Panel._newCell(request.response.status));
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    _newCell(text) {
+        let col = document.createElement('td');
+        col.innerHTML = text;
+        col.classList.add('table-cell');
+        return col;
     }
 }
 

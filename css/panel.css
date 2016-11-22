@@ -34,7 +34,7 @@
     top: 0;
     bottom: 0;
     width: 7px;
-    cursor: w-resize;
+    cursor: col-resize;
     z-index: 9999;
 }
 
@@ -53,4 +53,40 @@
 	position: absolute;
 	right: 0;
 	top: 0;
+}
+
+.panel-table {
+    font-size: 12px;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.panel-table thead {
+    border-bottom: 1px solid #ddd;
+}
+
+.panel-table tbody tr:nth-child(odd) {
+    background: #f3f3f3;
+}
+
+.panel-table tbody tr {
+    opacity: 0.6;
+}
+
+.panel-table tbody tr:hover {
+    cursor: pointer;
+    opacity: 1;
+}
+
+.panel-table tr td {
+    line-height: 30px;
+    min-height: 30px;
+    padding-left: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid #ddd;
+}
+
+.panel-table thead tr td {
+    border-bottom: 1px solid #ddd;
 }
