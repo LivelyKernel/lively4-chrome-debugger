@@ -13,17 +13,24 @@
 }
 
 .nav-button {
-    text-align: center;
+    font-size: 12;
+    font-weight: bold;
+    text-align: left;
     width: 100%;
     height: 3em;
     border: none;
-    padding: 0;
+    padding: 0 0 0 10px;
     color: rgb(48, 57, 66);
     background-color: hsl(0, 0%, 96%);
     outline: none;
+    cursor: pointer;
 }
 
-.selected {
+.nav-button:hover {
+    background-color: hsl(0, 0%, 92%);
+}
+
+.selected, .selected:hover {
     color: #fff;
     background-color: rgb(56, 121, 217);
 }
