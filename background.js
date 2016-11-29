@@ -1,6 +1,6 @@
 var connections = {};
 var ports = {};
-var messageLog = new Array();
+var messageLog = [];
 
 chrome.runtime.onConnect.addListener(function (port) {
     if (!ports[port.name]) {
@@ -11,25 +11,25 @@ chrome.runtime.onConnect.addListener(function (port) {
         });
     }
 
-    if (port.name == "livel4chromeextension") {
+    if (port.name == 'livel4chromeextension') {
         port.onMessage.addListener(function (message, sender) {
-            ports["livel4chromebackend"].postMessage(message);
+            ports.livel4chromebackend.postMessage(message);
 
         });
-    } else if (port.name == "livel4chromebackend") {
+    } else if (port.name == 'livel4chromebackend') {
         port.onMessage.addListener(function (message, sender) {
-            ports["livel4chromeextension"].postMessage(message);
+            ports.livel4chromeextension.postMessage(message);
             messageLog.push(message.messageCode);
 
-            if (ports["livel4chromepanel"]) {
-                ports["livel4chromepanel"].postMessage({evalLog: messageLog});
+            if (ports.livel4chromepanel) {
+                ports.livel4chromepanel.postMessage({evalLog: messageLog});
             }
         });
     } else {
         var extensionListener = function (message, sender, sendResponse) {
         // The original connection event doesn't include the tab ID of the
         // DevTools page, so we need to send it explicitly.
-            if (message.name == "init") {
+            if (message.name == 'init') {
               connections[message.tabId] = port;
               return;
             }

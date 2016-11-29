@@ -1,8 +1,8 @@
 class Lively4ChromeDebuggerExtension {
     constructor() {
-        this.panel = chrome.devtools.panels.create("Lively4", "/img/logo.png", "/panel.html");
+        this.panel = chrome.devtools.panels.create('Lively4', '/img/logo.png', '/panel.html');
 
-        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane("Lively4", function(sidebar) {
+        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane('Lively4', function(sidebar) {
             var modules = () => lively.modules.getPackages().map((ea) =>
                 ({name: ea.name, main: ea.main}));
             exec(modules, (result, isException) => {
@@ -17,7 +17,7 @@ class Lively4ChromeDebuggerExtension {
             });
         });
 
-        this.port = chrome.runtime.connect({name: "livel4chromebackend"});
+        this.port = chrome.runtime.connect({name: 'livel4chromebackend'});
         this.port.onMessage.addListener(this.callFunction.bind(this));
     }
 

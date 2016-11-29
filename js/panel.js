@@ -36,7 +36,7 @@ class Lively4Panel {
             lively4Panel.requestLog.push(request);
         });
 
-        this.port = chrome.runtime.connect({name: "livel4chromepanel"});
+        this.port = chrome.runtime.connect({name: 'livel4chromepanel'});
         this.port.onMessage.addListener(this.callFunction.bind(this));
     }
 
@@ -88,7 +88,7 @@ class Lively4Panel {
         document.addEventListener('mousemove', function() {
             if (moveMouse) {
                 nav.style.width = event.clientX;
-                main.style.width = (document.body.clientWidth - parseInt(nav.style.width,10)) + "px";
+                main.style.width = (document.body.clientWidth - parseInt(nav.style.width,10)) + 'px';
             }
         });
 
