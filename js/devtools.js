@@ -22,8 +22,11 @@ class Lively4ChromeDebuggerExtension {
     }
 
     callFunction (message) {
-        var value = eval(message.code);
-        this.port.postMessage({result: value, messageCode: message.code});
+        this.port.postMessage({
+            id: message.id,
+            result: eval('(' + message.code + ')()'),
+            messageCode: message.code
+        });
     }
 }
 

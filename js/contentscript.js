@@ -5,7 +5,7 @@ class Lively4ContentScript {
 
         this.port = chrome.runtime.connect({name: "livel4chromeextension"});
         this.port.onMessage.addListener(function (message, sender) {
-            document.dispatchEvent(new CustomEvent('ExtensionContextResult', { detail: message.result }));
+            document.dispatchEvent(new CustomEvent('EvalResult', { detail: message }));
         });        
     }
 
@@ -13,22 +13,27 @@ class Lively4ContentScript {
         var script = document.createElement('script');
         script.src = chrome.extension.getURL('js/script.js');
         (document.head||document.documentElement).appendChild(script);
-        script.onload = function() {
-            script.remove();
-        };
+        // script.onload = function() {
+        //     script.remove();
+        // };
     }
 
     registerEventListeners() {
         document.addEventListener('EvalInContentScriptContext', function(e) {
-            eval(e.detail);
+            document.dispatchEvent(new CustomEvent('EvalResult', {
+                detail: {
+                    id: e.detail.id,
+                    result: eval('(' + e.detail.code + ')()')
+                }
+            }));
         });
         
         document.addEventListener('EvalInExtensionContext', this.sendToExtension.bind(this));
     }
 
     sendToExtension(e) {
-        this.port.postMessage({code: e.detail});
+        this.port.postMessage(e.detail);
     }
 }
 
-var lively4ContentScript = new Lively4ContentScript();
+new Lively4ContentScript();
