@@ -14,7 +14,6 @@ chrome.runtime.onConnect.addListener(function (port) {
     if (port.name == 'livel4chromeextension') {
         port.onMessage.addListener(function (message, sender) {
             ports.livel4chromebackend.postMessage(message);
-
         });
     } else if (port.name == 'livel4chromebackend') {
         port.onMessage.addListener(function (message, sender) {

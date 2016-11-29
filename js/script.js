@@ -7,10 +7,10 @@ class Lively4ChromeDebugger {
         document.addEventListener('EvalResult', this.saveResult.bind(this));
 	}
 
-    evalInContentScriptContext(userFunction) {
+    _evalInContext(eventName, userFunction) {
         return new Promise((resolve, reject) => {
             this.resolvers[++this.idCounter] = resolve;
-            document.dispatchEvent(new CustomEvent('EvalInContentScriptContext', {
+            document.dispatchEvent(new CustomEvent(eventName, {
                 detail: {
                     id: this.idCounter,
                     code: userFunction.toString()
@@ -19,16 +19,17 @@ class Lively4ChromeDebugger {
         });
     }
 
+    evalInContentScriptContext(userFunction) {
+        return this._evalInContext('EvalInContentScriptContext', userFunction);
+    }
+    
+
+    evalInBackgroundScriptContext(userFunction) {
+        return this._evalInContext('EvalInBackgroundScriptContext', userFunction);
+    }
+
     evalInExtensionContext(userFunction) {
-        return new Promise((resolve, reject) => {
-            this.resolvers[++this.idCounter] = resolve;
-            document.dispatchEvent(new CustomEvent('EvalInExtensionContext', {
-                detail: {
-                    id: this.idCounter,
-                    code: userFunction.toString()
-                }
-            }));
-        });
+        return this._evalInContext('EvalInExtensionContext', userFunction);
     }
 
     saveResult(e) {
