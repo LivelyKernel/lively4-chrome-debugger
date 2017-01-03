@@ -5,7 +5,11 @@ class Lively4ContentScript {
 
         this.port = chrome.runtime.connect({name: "livel4chromeextension"});
         this.port.onMessage.addListener(function (message, sender) {
-            document.dispatchEvent(new CustomEvent('EvalResult', { detail: message }));
+            if ('params' in message) {
+                // alert(message['params'].callFrames[0].functionLocation);
+            } else {
+                document.dispatchEvent(new CustomEvent('EvalResult', { detail: message }));
+            }
         });        
     }
 

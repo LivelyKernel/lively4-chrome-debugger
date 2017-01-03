@@ -2,6 +2,37 @@ var connections = {};
 var ports = {};
 var messageLog = [];
 
+chrome.debugger.onEvent.addListener(onEvent);
+
+function onEvent(debuggeeId, method, params) {
+  if (method == 'Debugger.scriptParsed') {
+
+  } else if (method == 'Debugger.paused') {
+    onDebuggerPaused(debuggeeId, params);
+  }
+}
+
+function onAttach(debuggeeId) {
+  if (chrome.runtime.lastError) {
+    console.log(chrome.runtime.lastError.message);
+    return;
+  }
+
+  var tabId = debuggeeId.tabId;
+  chrome.debugger.sendCommand(
+      debuggeeId, "Debugger.enable", {},
+      onDebuggerEnabled.bind(null, debuggeeId));
+}
+
+function onDebuggerEnabled(debuggeeId) {
+  chrome.debugger.sendCommand(debuggeeId, "Debugger.pause");
+}
+
+function onDebuggerPaused(debuggeeId, params) {
+    ports.livel4chromeextension.postMessage({params: params});
+    chrome.debugger.sendCommand(debuggeeId, "Debugger.resume");
+}
+
 chrome.runtime.onConnect.addListener(function (port) {
     if (!ports[port.name]) {
         ports[port.name] = port;
@@ -12,6 +43,10 @@ chrome.runtime.onConnect.addListener(function (port) {
     }
 
     if (port.name == 'livel4chromeextension') {
+        var debuggeeId = {tabId: port.sender.tab.id};
+        console.log(debuggeeId);
+        chrome.debugger.attach(debuggeeId, '1.0', onAttach.bind(null, debuggeeId));
+
         port.onMessage.addListener(function (message, sender) {
             ports.livel4chromebackend.postMessage(message);
         });
