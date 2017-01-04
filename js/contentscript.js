@@ -7,6 +7,8 @@ class Lively4ContentScript {
         this.port.onMessage.addListener(function (message, sender) {
             if ('params' in message) {
                 document.dispatchEvent(new CustomEvent('EvalDebuggerResult', { detail: message }));
+            } else if ('targets' in message) {
+                document.dispatchEvent(new CustomEvent('DebuggingTargets', { detail: message.targets }));
             } else {
                 document.dispatchEvent(new CustomEvent('EvalResult', { detail: message }));
             }

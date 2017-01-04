@@ -3,36 +3,44 @@ class Lively4ChromeDebugger {
 		this.lastResult = null;
         this.resolvers = {};
         this.idCounter = 0;
+        this.targets = [];
 
         document.addEventListener('EvalResult', this.saveResult.bind(this));
-        document.addEventListener('EvalDebuggerResult', function(e) {
-            lively.openInspector(e);
+        document.addEventListener('EvalDebuggerResult', (e) => {
+            var debuggers = document.getElementsByTagName('lively-debugger');
+            for (var i = 0; i < debuggers.length; i++) {
+                debuggers[i].innerHTML = '';
+                var el = document.createTextNode(JSON.stringify(e.detail));
+                debuggers[i].details.appendChild(el);
+            }
+        });
+        document.addEventListener('DebuggingTargets', (e) => {
+            this.targets = e.detail;
         });
 	}
 
-    _evalInContext(eventName, userFunction) {
+    _evalInContext(eventName, userCode) {
         return new Promise((resolve, reject) => {
             this.resolvers[++this.idCounter] = resolve;
             document.dispatchEvent(new CustomEvent(eventName, {
                 detail: {
                     id: this.idCounter,
-                    code: userFunction.toString()
+                    code: userCode
                 }
             }));
         });
     }
 
-    evalInContentScriptContext(userFunction) {
-        return this._evalInContext('EvalInContentScriptContext', userFunction);
-    }
-    
-
-    evalInBackgroundScriptContext(userFunction) {
-        return this._evalInContext('EvalInBackgroundScriptContext', userFunction);
+    evalInContentScriptContext(userCode) {
+        return this._evalInContext('EvalInContentScriptContext', userCode);
     }
 
-    evalInExtensionContext(userFunction) {
-        return this._evalInContext('EvalInExtensionContext', userFunction);
+    evalInBackgroundScriptContext(userCode) {
+        return this._evalInContext('EvalInBackgroundScriptContext', userCode);
+    }
+
+    evalInExtensionContext(userCode) {
+        return this._evalInContext('EvalInExtensionContext', userCode);
     }
 
     saveResult(e) {
