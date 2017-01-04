@@ -1,12 +1,13 @@
 var connections = {};
 var ports = {};
 var messageLog = [];
+var scripts = [];
 
 chrome.debugger.onEvent.addListener(onEvent);
 
 function onEvent(debuggeeId, method, params) {
   if (method == 'Debugger.scriptParsed') {
-
+    scripts.push(params);
   } else if (method == 'Debugger.paused') {
     onDebuggerPaused(debuggeeId, params);
   }
@@ -45,10 +46,19 @@ chrome.runtime.onConnect.addListener(function (port) {
     if (port.name == 'livel4chromeextension') {
         var debuggeeId = {tabId: port.sender.tab.id};
         console.log(debuggeeId);
+        chrome.debugger.detach(debuggeeId); // detach just in case
         chrome.debugger.attach(debuggeeId, '1.0', onAttach.bind(null, debuggeeId));
 
         port.onMessage.addListener(function (message, sender) {
-            ports.livel4chromebackend.postMessage(message);
+            if (message.target == "extension") {
+                ports.livel4chromebackend.postMessage(message);
+            } else {
+                ports.livel4chromeextension.postMessage({
+                    id: message.id,
+                    result: eval('(' + message.code + ')()'),
+                    messageCode: message.code
+                });
+            }
         });
     } else if (port.name == 'livel4chromebackend') {
         port.onMessage.addListener(function (message, sender) {

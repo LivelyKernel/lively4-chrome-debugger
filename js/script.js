@@ -5,6 +5,9 @@ class Lively4ChromeDebugger {
         this.idCounter = 0;
 
         document.addEventListener('EvalResult', this.saveResult.bind(this));
+        document.addEventListener('EvalDebuggerResult', function(e) {
+            lively.openInspector(e);
+        });
 	}
 
     _evalInContext(eventName, userFunction) {
