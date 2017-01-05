@@ -1,13 +1,5 @@
 class Lively4Panel {
     constructor() {
-        this.backgroundPageConnection = chrome.runtime.connect({
-            name: 'panel'
-        });
-
-        this.backgroundPageConnection.postMessage({
-            name: 'init',
-            tabId: chrome.devtools.inspectedWindow.tabId
-        });
         Lively4Panel._initializers = {
             network: function() {
                 if (lively4Panel.requestLogInterval) return;
@@ -36,27 +28,17 @@ class Lively4Panel {
             lively4Panel.requestLog.push(request);
         });
 
-        this.port = chrome.runtime.connect({name: 'livel4chromepanel'});
-        this.port.onMessage.addListener(this.callFunction.bind(this));
-    }
-
-    callFunction (message) {
-        this.evalLog = message.evalLog;
-        var evalLogTemplate = document.querySelector('#eval-log-template');
-        var evalLog = document.querySelector('#eval-log');
-        evalLogTemplate.innerHTML = '';
-
-        if (this.evalLog) {
-            this.evalLog.forEach(function(entry) {
-                evalLogTemplate.innerHTML = evalLogTemplate.innerHTML + entry + '<br>';
+        // open port to background page, so that we can execute code in this context
+        this.portToBackground = chrome.runtime.connect({name: 'PanelToBackground'});
+        this.portToBackground.onMessage.addListener((message) => {
+            this.portToBackground.postMessage({
+                id: message.id,
+                result: {
+                    code: message.code,
+                    result: eval('(' + message.code + ')()')
+                }
             });
-        }
-
-        if (evalLog.classList.contains('selected')) {
-            var clone = document.importNode(evalLogTemplate.content, true);
-            main.innerHTML = '';
-            main.appendChild(clone);
-        }
+        });
     }
 
     static _initTemplate(templateId) {

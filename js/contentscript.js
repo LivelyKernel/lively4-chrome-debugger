@@ -3,47 +3,42 @@ class Lively4ContentScript {
         this.injectScriptIntoWebsite();
         this.registerEventListeners();
 
-        this.port = chrome.runtime.connect({name: "livel4chromeextension"});
-        this.port.onMessage.addListener(function (message, sender) {
-            if ('params' in message) {
-                document.dispatchEvent(new CustomEvent('EvalDebuggerResult', { detail: message }));
-            } else if ('targets' in message) {
-                document.dispatchEvent(new CustomEvent('DebuggingTargets', { detail: message.targets }));
-            } else {
-                document.dispatchEvent(new CustomEvent('EvalResult', { detail: message }));
-            }
-        });        
+        this.portToBackground = chrome.runtime.connect({name: 'ContentScriptToBackground'});
+        this.portToBackground.onMessage.addListener(function (message, sender) {
+            var eventName = message.eventName || 'ResolveResult';
+            document.dispatchEvent(new CustomEvent(eventName, {
+                detail: message
+            }));
+        });
     }
 
     injectScriptIntoWebsite() {
         var script = document.createElement('script');
         script.src = chrome.extension.getURL('js/script.js');
         (document.head || document.documentElement).appendChild(script);
-        // script.onload = function() {
-        //     script.remove();
-        // };
+        // script.onload = () => { script.remove() };
+    }
+
+    _eval(message) {
+        document.dispatchEvent(new CustomEvent('ResolveResult', {
+            detail: {
+                id: message.id,
+                result: {
+                    code: message.code,
+                    result: eval('(' + message.code + ')()')
+                }
+            }
+        }));
     }
 
     registerEventListeners() {
-        document.addEventListener('EvalInContentScriptContext', function(e) {
-            document.dispatchEvent(new CustomEvent('EvalResult', {
-                detail: {
-                    id: e.detail.id,
-                    result: eval('(' + e.detail.code + ')()')
-                }
-            }));
+        document.addEventListener('SendToContentScript', (e) => {
+            if (e.detail.type == 'EvalContentScript') {
+                this._eval(e.detail);
+            } else { // forward everything else to background page
+                this.portToBackground.postMessage(e.detail);
+            }
         });
-        
-        document.addEventListener('EvalInExtensionContext', function(e) {
-            e.detail.target = 'extension';
-            this.sendToExtension(e);
-        }.bind(this));
-
-        document.addEventListener('EvalInBackgroundScriptContext', this.sendToExtension.bind(this));
-    }
-
-    sendToExtension(e) {
-        this.port.postMessage(e.detail);
     }
 }
 

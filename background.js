@@ -1,115 +1,121 @@
-var connections = {};
-var ports = {};
-var messageLog = [];
+var portToContentScript, portToDevTools, portToPanel;
 var scripts = [];
 
-chrome.debugger.onEvent.addListener(onEvent);
-
-function onEvent(debuggeeId, method, params) {
+function onDebuggerEvent(debuggeeId, method, params) {
   if (method == 'Debugger.scriptParsed') {
-    scripts.push(params);
+    scripts.push(params); // remeber all parsed scripts for now
   } else if (method == 'Debugger.paused') {
     onDebuggerPaused(debuggeeId, params);
   }
 }
 
-function onAttach(debuggeeId) {
-  if (chrome.runtime.lastError) {
-    console.log(chrome.runtime.lastError.message);
-    return;
-  }
-
-  var tabId = debuggeeId.tabId;
-  chrome.debugger.sendCommand(
-      debuggeeId, "Debugger.enable", {},
-      onDebuggerEnabled.bind(null, debuggeeId));
-}
-
-function onDebuggerEnabled(debuggeeId) {
-  chrome.debugger.sendCommand(debuggeeId, "Debugger.pause");
-}
-
 function onDebuggerPaused(debuggeeId, params) {
-    chrome.debugger.sendCommand(debuggeeId, "Debugger.getScriptSource", params.callFrames[0].location, (res) => {
-        ports.livel4chromeextension.postMessage({params: params, scriptSource: res.scriptSource});
-    });
-    // chrome.debugger.sendCommand(debuggeeId, "Debugger.resume");
+    var currentScriptLocation = params.callFrames[0].location;
+    chrome.debugger.sendCommand(
+        debuggeeId,
+        'Debugger.getScriptSource',
+        currentScriptLocation,
+        (res) => {
+            params.callFrames[0].scriptSource = res.scriptSource;
+            portToContentScript.postMessage({
+                eventName: 'DebuggerPaused',
+                result: params
+            });
+        }
+    );
 }
 
-chrome.runtime.onConnect.addListener(function (port) {
-    if (!ports[port.name]) {
-        ports[port.name] = port;
-
-        port.onDisconnect.addListener(function(event) {
-            delete ports[port.name];
+function ensurePortVariable(portVariable, port) {
+    if (!window[portVariable]) {
+        window[portVariable] = port;
+        window[portVariable].onDisconnect.addListener(function(event) {
+            window[portVariable] = null;
         });
     }
+}
 
-    if (port.name == 'livel4chromeextension') {
-        port.onMessage.addListener(function (message, sender) {
-            if (message.target == "extension") {
-                ports.livel4chromebackend.postMessage(message);
-            } else if (message.target == "debuggingTargets") {
-                chrome.debugger.getTargets((targets) => {
-                    ports.livel4chromeextension.postMessage({
-                        id: message.id,
-                        result: targets
-                    });
-                });
+function handleEvalRequest(message) {
+    portToContentScript.postMessage({
+        id: message.id,
+        result: {
+            code: message.code,
+            result: eval('(' + message.code + ')()')
+        }
+    });
+}
+
+function handleDebuggingTargetsRequest(message) {
+    chrome.debugger.getTargets((targets) => {
+        portToContentScript.postMessage({
+            id: message.id,
+            result: targets
+        });
+    });
+}
+
+function handleDebuggerAttachRequest(message) {
+    var target = { targetId: message.targetId };
+    chrome.debugger.attach(target, '1.0', () => {
+        portToContentScript.postMessage({ id: message.id });
+    });
+}
+
+function handleDebuggerDetachRequest(message) {
+    chrome.debugger.detach({ targetId: message.targetId }, () => {
+        portToContentScript.postMessage({ id: message.id });
+    });
+}
+
+function handleDebuggerCommandRequest(message) {
+    chrome.debugger.sendCommand(
+        { targetId: message.targetId },
+        `Debugger.${message.method}`,
+        message.params,
+        (res) => {
+            portToContentScript.postMessage({
+                id: message.id,
+                result: res
+            });
+        }
+    );
+}
+
+function onRuntimeConnect(port) {
+    if (port.name == 'ContentScriptToBackground') {
+        ensurePortVariable('portToContentScript', port);
+        portToContentScript.onMessage.addListener(function (message, sender) {
+            if (message.type == 'EvalBackground') {
+                handleEvalRequest(message);
+            } else if (message.type == 'EvalDevTools') {
+                portToDevTools.postMessage(message);
+            } else if (message.type == 'EvalPanel') {
+                portToPanel.postMessage(message);
+            } else if (message.type == 'DebuggingTargets') {
+                handleDebuggingTargetsRequest(message);
+            } else if (message.type == 'DebuggerAttach') {
+                handleDebuggerAttachRequest(message);
+            } else if (message.type == 'DebuggerDetach') {
+                handleDebuggerDetachRequest(message);
+            } else if (message.type == 'DebuggerCommand') {
+                handleDebuggerCommandRequest(message);
             } else {
-                ports.livel4chromeextension.postMessage({
-                    id: message.id,
-                    result: eval('(' + message.code + ')()'),
-                    messageCode: message.code
-                });
+                console.warn('Unknown message:', message);
             }
         });
-    } else if (port.name == 'livel4chromebackend') {
-        port.onMessage.addListener(function (message, sender) {
-            ports.livel4chromeextension.postMessage(message);
-            messageLog.push(message.messageCode);
-
-            if (ports.livel4chromepanel) {
-                ports.livel4chromepanel.postMessage({evalLog: messageLog});
-            }
+    } else if (port.name == 'DevToolsToBackground') {
+        ensurePortVariable('portToDevTools', port);
+        portToDevTools.onMessage.addListener(function (message, sender) {
+            portToContentScript.postMessage(message);
+        });
+    } else if (port.name == 'PanelToBackground') {
+        ensurePortVariable('portToPanel', port);
+        portToPanel.onMessage.addListener(function (message, sender) {
+            portToContentScript.postMessage(message);
         });
     } else {
-        var extensionListener = function (message, sender, sendResponse) {
-        // The original connection event doesn't include the tab ID of the
-        // DevTools page, so we need to send it explicitly.
-            if (message.name == 'init') {
-              connections[message.tabId] = port;
-              return;
-            }
-        };
-
-        // Listen to messages sent from the DevTools page
-        port.onMessage.addListener(extensionListener);
-
-        port.onDisconnect.addListener(function(port) {
-            port.onMessage.removeListener(extensionListener);
-
-            var tabs = Object.keys(connections);
-            for (var i=0, len=tabs.length; i < len; i++) {
-              if (connections[tabs[i]] == port) {
-                delete connections[tabs[i]];
-                break;
-              }
-            }
-        });
+        console.warn('Unknown port:', port);
     }
-});
+}
 
-// Receive message from content script and relay to the devTools page for the
-// current tab
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    // Messages from content scripts should have sender.tab set
-    if (sender.tab) {
-      var tabId = sender.tab.id;
-      if (tabId in connections) {
-        connections[tabId].postMessage(request);
-      }
-    }
-
-    return true;
-});
+chrome.debugger.onEvent.addListener(onDebuggerEvent);
+chrome.runtime.onConnect.addListener(onRuntimeConnect);

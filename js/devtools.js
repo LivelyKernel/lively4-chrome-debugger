@@ -17,15 +17,16 @@ class Lively4ChromeDebuggerExtension {
             });
         });
 
-        this.port = chrome.runtime.connect({name: 'livel4chromebackend'});
-        this.port.onMessage.addListener(this.callFunction.bind(this));
-    }
-
-    callFunction (message) {
-        this.port.postMessage({
-            id: message.id,
-            result: eval('(' + message.code + ')()'),
-            messageCode: message.code
+        // open port to background page, so that we can execute code in this context
+        this.portToBackground = chrome.runtime.connect({name: 'DevToolsToBackground'});
+        this.portToBackground.onMessage.addListener((message) => {
+            this.portToBackground.postMessage({
+                id: message.id,
+                result: {
+                    code: message.code,
+                    result: eval('(' + message.code + ')()')
+                }
+            });
         });
     }
 }
@@ -37,17 +38,11 @@ var checkForLively4Interval = setInterval(function() {
 }, 3000);
 
 function createPanelIfLivelyPageFound() {
-  if (lively4ChromeDebuggerExtension) {
-    return;
-  }
-
-  exec(() => lively !== undefined, (isLivelyPage, err) => {
-    if (!isLivelyPage || lively4ChromeDebuggerExtension) {
-      return;
-    }
-
-    lively4ChromeDebuggerExtension = new Lively4ChromeDebuggerExtension();
-  });
+    if (lively4ChromeDebuggerExtension) return;
+    exec(() => lively !== undefined, (isLivelyPage, err) => {
+        if (!isLivelyPage || lively4ChromeDebuggerExtension) return;
+        lively4ChromeDebuggerExtension = new Lively4ChromeDebuggerExtension();
+    });
 }
 
 chrome.devtools.network.onNavigated.addListener(() => {
