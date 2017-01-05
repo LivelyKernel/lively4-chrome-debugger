@@ -2,12 +2,21 @@ class Lively4ChromeDebugger {
 	constructor() {
 		this.lastResult = null;
         this.resolvers = {};
+        this.rejecters = {};
         this.idCounter = 0;
         this.targets = [];
 
         document.addEventListener('ResolveResult', (e) => {
-            if (e.detail.id in this.resolvers) {
-                this.resolvers[e.detail.id](e.detail.result);
+            var rId = e.detail.id;
+            if (rId in this.resolvers) {
+                var data = e.detail.result;
+                if ('error' in data) {
+                    this.rejecters[rId](data);
+                } else {
+                    this.resolvers[rId](data);
+                }
+                delete this.rejecters[rId];
+                delete this.resolvers[rId];
             } else {
                 console.warn('No resolver for:', e.detail);
             }
@@ -36,7 +45,9 @@ class Lively4ChromeDebugger {
 
     _sendToContentScript(data) {
         return new Promise((resolve, reject) => {
-            this.resolvers[++this.idCounter] = resolve;
+            this.idCounter++;
+            this.resolvers[this.idCounter] = resolve;
+            this.rejecters[this.idCounter] = reject;
             data.id = this.idCounter;
             document.dispatchEvent(new CustomEvent('SendToContentScript', {
                 detail: data

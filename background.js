@@ -44,6 +44,15 @@ function handleEvalRequest(message) {
     });
 }
 
+function handleError(message, errorMessage) {
+    portToContentScript.postMessage({
+        id: message.id,
+        result: {
+            error: errorMessage,
+        }
+    });
+}
+
 function handleDebuggingTargetsRequest(message) {
     chrome.debugger.getTargets((targets) => {
         portToContentScript.postMessage({
@@ -87,9 +96,17 @@ function onRuntimeConnect(port) {
             if (message.type == 'EvalBackground') {
                 handleEvalRequest(message);
             } else if (message.type == 'EvalDevTools') {
-                portToDevTools.postMessage(message);
+                if (portToDevTools) {
+                    portToDevTools.postMessage(message);
+                } else {
+                    handleError(message, 'Cannot connect to DevTools. Are they open?');
+                }
             } else if (message.type == 'EvalPanel') {
-                portToPanel.postMessage(message);
+                if (portToPanel) {
+                    portToPanel.postMessage(message);
+                } else {
+                    handleError(message, 'Cannot connect to Lively4 panel. Is it open?');
+                }
             } else if (message.type == 'DebuggingTargets') {
                 handleDebuggingTargetsRequest(message);
             } else if (message.type == 'DebuggerAttach') {
