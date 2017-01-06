@@ -10,19 +10,10 @@ function onDebuggerEvent(debuggeeId, method, params) {
 }
 
 function onDebuggerPaused(debuggeeId, params) {
-    var currentScriptLocation = params.callFrames[0].location;
-    chrome.debugger.sendCommand(
-        debuggeeId,
-        'Debugger.getScriptSource',
-        currentScriptLocation,
-        (res) => {
-            params.callFrames[0].scriptSource = res.scriptSource;
-            portToContentScript.postMessage({
-                eventName: 'DebuggerPaused',
-                result: params
-            });
-        }
-    );
+    portToContentScript.postMessage({
+        eventName: 'DebuggerPaused',
+        result: params
+    });
 }
 
 function ensurePortVariable(portVariable, port) {
@@ -64,7 +55,7 @@ function handleDebuggingTargetsRequest(message) {
 
 function handleDebuggerAttachRequest(message) {
     var target = { targetId: message.targetId };
-    chrome.debugger.attach(target, '1.0', () => {
+    chrome.debugger.attach(target, '1.2', () => {
         portToContentScript.postMessage({ id: message.id });
     });
 }
@@ -78,7 +69,7 @@ function handleDebuggerDetachRequest(message) {
 function handleDebuggerCommandRequest(message) {
     chrome.debugger.sendCommand(
         { targetId: message.targetId },
-        `Debugger.${message.method}`,
+        message.method,
         message.params,
         (res) => {
             portToContentScript.postMessage({

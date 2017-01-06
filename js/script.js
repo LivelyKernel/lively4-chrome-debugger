@@ -10,7 +10,7 @@ class Lively4ChromeDebugger {
             var rId = e.detail.id;
             if (rId in this.resolvers) {
                 var data = e.detail.result;
-                if ('error' in data) {
+                if (data && 'error' in data) {
                     this.rejecters[rId](data);
                 } else {
                     this.resolvers[rId](data);
@@ -23,22 +23,8 @@ class Lively4ChromeDebugger {
         });
         document.addEventListener('DebuggerPaused', (e) => {
             var debuggers = document.getElementsByTagName('lively-debugger');
-            var data = e.detail.result;
             for (var i = 0; i < debuggers.length; i++) {
-                var d = debuggers[i];
-                d.innerHTML = '';
-                d.codeEditor.setValue(data.callFrames[0].scriptSource);
-                d.codeEditor.gotoLine(data.callFrames[0].location.lineNumber);
-                var scopeChain = data.callFrames[0].scopeChain;
-                for (var j = 0; j < scopeChain.length; j++) {
-                    var scope = scopeChain[j];
-                    var title = document.createElement('b');
-                    title.innerHTML = scope.type;
-                    var content = document.createElement('pre');
-                    content.innerHTML = JSON.stringify(scope.object, null, '  ');
-                    d.details.appendChild(title);
-                    d.details.appendChild(content);
-                }
+                debuggers[i].dispatchDebuggerPaused(e.detail.result);
             }
         });
 	}
