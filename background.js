@@ -2,11 +2,11 @@ var portToContentScript, portToDevTools, portToPanel;
 var scripts = [];
 
 function onDebuggerEvent(debuggeeId, method, params) {
-  if (method == 'Debugger.scriptParsed') {
-    scripts.push(params); // remeber all parsed scripts for now
-  } else if (method == 'Debugger.paused') {
-    onDebuggerPaused(debuggeeId, params);
-  }
+    if (method == 'Debugger.paused') {
+        onDebuggerPaused(debuggeeId, params);
+    } else if (method == 'Debugger.scriptParsed') {
+        scripts.push(params); // remember all parsed
+    }
 }
 
 function onDebuggerPaused(debuggeeId, params) {
@@ -53,7 +53,15 @@ function handleDebuggingTargetsRequest(message) {
     });
 }
 
+function handleDebuggingScriptsRequest(message) {
+    portToContentScript.postMessage({
+        id: message.id,
+        result: scripts
+    });
+}
+
 function handleDebuggerAttachRequest(message) {
+    scripts = []; // clear list of scripts
     var target = { targetId: message.targetId };
     chrome.debugger.attach(target, '1.2', () => {
         portToContentScript.postMessage({ id: message.id });
@@ -100,6 +108,8 @@ function onRuntimeConnect(port) {
                 }
             } else if (message.type == 'DebuggingTargets') {
                 handleDebuggingTargetsRequest(message);
+            } else if (message.type == 'DebuggingScripts') {
+                handleDebuggingScriptsRequest(message);
             } else if (message.type == 'DebuggerAttach') {
                 handleDebuggerAttachRequest(message);
             } else if (message.type == 'DebuggerDetach') {

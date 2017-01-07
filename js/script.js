@@ -72,6 +72,13 @@ class Lively4ChromeDebugger {
         });
     }
 
+    getDebuggingScripts() {
+        return this._sendToContentScript({
+            id: this.idCounter,
+            type: 'DebuggingScripts'
+        });
+    }
+
     debuggerAttach(targetId) {
         return this._sendToContentScript({
             id: this.idCounter,
