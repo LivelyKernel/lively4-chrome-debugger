@@ -6,28 +6,32 @@ class Lively4ChromeDebugger {
         this.idCounter = 0;
         this.targets = [];
 
-        document.addEventListener('ResolveResult', (e) => {
-            var rId = e.detail.id;
-            if (rId in this.resolvers) {
-                var data = e.detail.result;
-                if (data && 'error' in data) {
-                    this.rejecters[rId](data);
-                } else {
-                    this.resolvers[rId](data);
-                }
-                delete this.rejecters[rId];
-                delete this.resolvers[rId];
-            } else {
-                console.warn('No resolver for:', e.detail);
-            }
-        });
-        document.addEventListener('DebuggerPaused', (e) => {
-            var debuggers = document.getElementsByTagName('lively-debugger');
-            for (var i = 0; i < debuggers.length; i++) {
-                debuggers[i].dispatchDebuggerPaused(e.detail.result);
-            }
-        });
+        document.addEventListener('ResolveResult', this._resolveResult.bind(this));
+        document.addEventListener('DebuggerPaused', this._debuggerPaused.bind(this));
 	}
+
+    _resolveResult(e) {
+        var rId = e.detail.id;
+        if (rId in this.resolvers) {
+            var data = e.detail.result;
+            if (data && 'error' in data) {
+                this.rejecters[rId](data);
+            } else {
+                this.resolvers[rId](data);
+            }
+            delete this.rejecters[rId];
+            delete this.resolvers[rId];
+        } else {
+            console.warn('No resolver for:', e.detail);
+        }
+    }
+
+    _debuggerPaused(e) {
+        var debuggers = document.getElementsByTagName('lively-debugger');
+        for (var i = 0; i < debuggers.length; i++) {
+            debuggers[i].dispatchDebuggerPaused(e.detail.result);
+        }
+    }
 
     _sendToContentScript(data) {
         return new Promise((resolve, reject) => {
@@ -58,11 +62,11 @@ class Lively4ChromeDebugger {
     }
 
     evalInDevToolsContext(userCode) {
-        return this._evalInContext(userCode, 'EvalDevTools');
+        return this._evalInContext(userCode, 'SendToDevTools');
     }
 
     evalInPanelContext(userCode) {
-        return this._evalInContext(userCode, 'EvalPanel');
+        return this._evalInContext(userCode, 'SendToPanel');
     }
 
     getDebuggingTargets() {

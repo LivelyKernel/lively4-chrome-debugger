@@ -2,10 +2,10 @@ class Lively4ChromeDebuggerExtension {
     constructor() {
         this.panel = chrome.devtools.panels.create('Lively4', '/img/logo.png', '/panel.html');
 
-        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane('Lively4', function(sidebar) {
+        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane('Lively4 Modules', function(sidebar) {
             var modules = () => lively.modules.getPackages().map((ea) =>
                 ({name: ea.name, main: ea.main}));
-            exec(modules, (result, isException) => {
+            execInLively(modules, (result, isException) => {
                 var data;
                 if (!isException) {
                     data = result;
@@ -39,7 +39,7 @@ var checkForLively4Interval = setInterval(function() {
 
 function createPanelIfLivelyPageFound() {
     if (lively4ChromeDebuggerExtension) return;
-    exec(() => lively !== undefined, (isLivelyPage, err) => {
+    execInLively(() => lively !== undefined, (isLivelyPage, err) => {
         if (!isLivelyPage || lively4ChromeDebuggerExtension) return;
         lively4ChromeDebuggerExtension = new Lively4ChromeDebuggerExtension();
     });

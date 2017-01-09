@@ -1,26 +1,11 @@
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+};
+
 class Lively4Panel {
     constructor() {
-        Lively4Panel._initializers = {
-            network: function() {
-                if (lively4Panel.requestLogInterval) return;
-                lively4Panel.requestLogInterval = setInterval(() => {
-                    let networkList = document.getElementsByClassName('network-list');
-                    for (let i = 0; i < networkList.length; i++) {
-                        networkList[i].innerHTML = '';
-                        networkList[i].appendChild(lively4Panel.networkContent());
-                    }
-                }, 1000);
-            },
-            testing: function() {
-                document.getElementById('open-sync-window').addEventListener('click', function() {
-                    exec(() => lively.openComponentInWindow('lively-sync'));
-                });
-            }
-        };
-
         this._registerNavButtons();
         this._registerDraggableBar();
-        this.evalLog = null;
         this.requestLog = [];
         this.requestLogInterval = null;
 
@@ -41,14 +26,16 @@ class Lively4Panel {
         });
     }
 
-    static _initTemplate(templateId) {
+    _initializeTemplate(templateId) {
         var content = document.querySelector('#' + templateId + '-template');
         var main = document.querySelector('#main');
         var clone = document.importNode(content.content, true);
         main.innerHTML = '';
         main.appendChild(clone);
-        var cb = Lively4Panel._initializers[templateId];
-        if (cb) cb();
+        var initializer = `initialize${templateId.capitalize()}`;
+        if (initializer in this) {
+            this[initializer].bind(this)();
+        }
     }
 
     _registerDraggableBar() {
@@ -86,19 +73,50 @@ class Lively4Panel {
     _registerNavButtons() {
         var navButtons = document.getElementsByClassName('nav-button');
 
-        var clickHandler = function() {
+        var clickHandler = (e) => {
             var oldSelection = document.getElementsByClassName('selected')[0];
             oldSelection.classList.remove('selected');
-            this.classList.add('selected');
-            Lively4Panel._initTemplate(this.id);
+            e.target.classList.add('selected');
+            this._initializeTemplate(e.target.id);
         };
 
         for (var i = 0; i < navButtons.length; i++) {
-            navButtons[i].addEventListener('click', clickHandler.bind(navButtons[i]));
+            navButtons[i].addEventListener('click', clickHandler);
         }
 
         var initButton = document.getElementsByClassName('selected')[0];
-        Lively4Panel._initTemplate(initButton.id);
+        this._initializeTemplate(initButton.id);
+    }
+
+    initializeNetwork() {
+        if (this.requestLogInterval) return;
+        this.requestLogInterval = setInterval(() => {
+            let networkList = document.getElementsByClassName('network-list');
+            for (let i = 0; i < networkList.length; i++) {
+                networkList[i].innerHTML = '';
+                networkList[i].appendChild(this.networkContent());
+            }
+        }, 1000);
+    }
+
+    initializeModules() {
+        execInLively(() => {
+            return lively.modules.getPackages().map(
+                (ea) => ({name: ea.name, main: ea.main}));
+        }, (res) => {
+            let moduleList = document.getElementsByClassName('module-list');
+            for (let i = 0; i < moduleList.length; i++) {
+                moduleList[i].innerHTML = '';
+                moduleList[i].appendChild(this.modulesContent(res));
+            }
+        });
+    }
+
+    initializeTesting() {
+        var openSyncButton = document.getElementById('open-sync-window');
+        openSyncButton.addEventListener('click', function() {
+            execInLively(() => lively.openComponentInWindow('lively-sync'));
+        });
     }
 
     networkContent() {
@@ -120,6 +138,27 @@ class Lively4Panel {
             row.appendChild(lively4Panel._newCell(request.request.method));
             row.appendChild(lively4Panel._newCell(Math.round(request.time) + 'ms'));
             row.appendChild(lively4Panel._newCell(request.response.status));
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    modulesContent(modules) {
+        let table = document.createElement('table');
+        table.classList.add('panel-table');
+        let thead = document.createElement('thead');
+        let theadrow = document.createElement('tr');
+        theadrow.appendChild(lively4Panel._newCell('Name'));
+        theadrow.appendChild(lively4Panel._newCell('Main file'));
+        thead.appendChild(theadrow);
+        table.appendChild(thead);
+        let tbody = document.createElement('tbody');
+        modules.forEach(function(module) {
+            let row = document.createElement('tr');
+            row.classList.add('table-row');
+            row.appendChild(lively4Panel._newCell(module.name));
+            row.appendChild(lively4Panel._newCell(module.main));
             tbody.appendChild(row);
         });
         table.appendChild(tbody);

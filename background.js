@@ -6,6 +6,8 @@ function onDebuggerEvent(debuggeeId, method, params) {
         onDebuggerPaused(debuggeeId, params);
     } else if (method == 'Debugger.scriptParsed') {
         scripts.push(params); // remember all parsed
+    } else {
+        console.log('Unsupported event:', method, params);
     }
 }
 
@@ -94,13 +96,13 @@ function onRuntimeConnect(port) {
         portToContentScript.onMessage.addListener(function (message, sender) {
             if (message.type == 'EvalBackground') {
                 handleEvalRequest(message);
-            } else if (message.type == 'EvalDevTools') {
+            } else if (message.type == 'SendToDevTools') {
                 if (portToDevTools) {
                     portToDevTools.postMessage(message);
                 } else {
                     handleError(message, 'Cannot connect to DevTools. Are they open?');
                 }
-            } else if (message.type == 'EvalPanel') {
+            } else if (message.type == 'SendToPanel') {
                 if (portToPanel) {
                     portToPanel.postMessage(message);
                 } else {
