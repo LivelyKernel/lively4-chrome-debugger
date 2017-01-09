@@ -8,6 +8,9 @@ class Lively4Panel {
         this._registerDraggableBar();
         this.requestLog = [];
         this.requestLogInterval = null;
+        this.resolvers = {};
+        this.rejecters = {};
+        this.idCounter = 0;
 
         chrome.devtools.network.onRequestFinished.addListener(request => {
             lively4Panel.requestLog.push(request);
@@ -16,14 +19,36 @@ class Lively4Panel {
         // open port to background page, so that we can execute code in this context
         this.portToBackground = chrome.runtime.connect({name: 'PanelToBackground'});
         this.portToBackground.onMessage.addListener((message) => {
-            this.portToBackground.postMessage({
-                id: message.id,
-                result: {
-                    code: message.code,
-                    result: eval('(' + message.code + ')()')
-                }
-            });
+            if (message.result) {
+                this._resolveResult(message);
+            } else if (message.code) {
+                this.portToBackground.postMessage({
+                    id: message.id,
+                    result: {
+                        code: message.code,
+                        result: eval('(' + message.code + ')()')
+                    }
+                });
+            } else {
+                console.warn('Unhandled message:', message);
+            }
         });
+    }
+
+    _resolveResult(message) {
+        var rId = message.id;
+        if (rId in this.resolvers) {
+            var data = message.result;
+            if (data && 'error' in data) {
+                this.rejecters[rId](data);
+            } else {
+                this.resolvers[rId](data);
+            }
+            delete this.rejecters[rId];
+            delete this.resolvers[rId];
+        } else {
+            console.warn('No resolver for:', message);
+        }
     }
 
     _initializeTemplate(templateId) {
@@ -100,7 +125,7 @@ class Lively4Panel {
     }
 
     initializeModules() {
-        execInLively(() => {
+        evalInLively(() => {
             return lively.modules.getPackages().map(
                 (ea) => ({name: ea.name, main: ea.main}));
         }, (res) => {
@@ -115,7 +140,43 @@ class Lively4Panel {
     initializeTesting() {
         var openSyncButton = document.getElementById('open-sync-window');
         openSyncButton.addEventListener('click', function() {
-            execInLively(() => lively.openComponentInWindow('lively-sync'));
+            evalInLively(() => lively.openComponentInWindow('lively-sync'));
+        });
+    }
+
+    initializeFocalstorage() {
+        this.asyncEvalInLively(() => {
+            var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB;
+            return new Promise(function(resolve, reject) {
+                lively.focalStorage.keys().then((keys) => {
+                    lively.focalStorage.getItems().then((values) => {
+                        resolve({
+                            keys: keys,
+                            values: values
+                        });
+                    });
+                });
+            });
+        }).then((data) => {
+            let focalstorageItems = document.getElementsByClassName('focalstorage-data');
+            for (let i = 0; i < focalstorageItems.length; i++) {
+                focalstorageItems[i].innerHTML = '';
+                focalstorageItems[i].appendChild(this.focalStorageContent(data.result));
+            }
+        });
+    }
+
+    asyncEvalInLively(userFunction) {
+        return new Promise((resolve, reject) => {
+            this.idCounter++;
+            this.resolvers[this.idCounter] = resolve;
+            this.rejecters[this.idCounter] = reject;
+            this.portToBackground.postMessage({
+                id: this.idCounter,
+                code: userFunction.toString(),
+                type: 'SendToPanel', // send back to panel
+                eventName: 'AsyncEvalInLively'
+            });
         });
     }
 
@@ -138,6 +199,27 @@ class Lively4Panel {
             row.appendChild(lively4Panel._newCell(request.request.method));
             row.appendChild(lively4Panel._newCell(Math.round(request.time) + 'ms'));
             row.appendChild(lively4Panel._newCell(request.response.status));
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    focalStorageContent(keyValues) {
+        let table = document.createElement('table');
+        table.classList.add('panel-table');
+        let thead = document.createElement('thead');
+        let theadrow = document.createElement('tr');
+        theadrow.appendChild(lively4Panel._newCell('Key'));
+        theadrow.appendChild(lively4Panel._newCell('Value'));
+        thead.appendChild(theadrow);
+        table.appendChild(thead);
+        let tbody = document.createElement('tbody');
+        keyValues.keys.forEach(function(key, index) {
+            let row = document.createElement('tr');
+            row.classList.add('table-row');
+            row.appendChild(lively4Panel._newCell(key));
+            row.appendChild(lively4Panel._newCell(keyValues.values[index]));
             tbody.appendChild(row);
         });
         table.appendChild(tbody);

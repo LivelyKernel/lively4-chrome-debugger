@@ -1,3 +1,3 @@
-function execInLively(fnc, cb = () => {}) {
+function evalInLively(fnc, cb = () => {}) {
     chrome.devtools.inspectedWindow.eval('(' + fnc.toString() + ')()', cb);
 }

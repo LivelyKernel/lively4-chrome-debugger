@@ -8,6 +8,7 @@ class Lively4ChromeDebugger {
 
         document.addEventListener('ResolveResult', this._resolveResult.bind(this));
         document.addEventListener('DebuggerPaused', this._debuggerPaused.bind(this));
+        document.addEventListener('AsyncEvalInLively', this._asyncEvalInLively.bind(this));
 	}
 
     _resolveResult(e) {
@@ -33,6 +34,20 @@ class Lively4ChromeDebugger {
         }
     }
 
+    _asyncEvalInLively(e) {
+        var message = e.detail;
+        eval('(' + message.code + ')()').then((res) => {
+            this._sendToContentScript({
+                id: message.id,
+                type: message.type,
+                result: {
+                    code: message.code,
+                    result: res
+                }
+            });
+        });
+    }
+
     _sendToContentScript(data) {
         return new Promise((resolve, reject) => {
             this.idCounter++;
@@ -47,7 +62,6 @@ class Lively4ChromeDebugger {
 
     _evalInContext(userCode, context) {
         return this._sendToContentScript({
-            id: this.idCounter,
             code: userCode,
             type: context
         });
