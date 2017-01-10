@@ -85,21 +85,18 @@ class Lively4ChromeDebugger {
 
     getDebuggingTargets() {
         return this._sendToContentScript({
-            id: this.idCounter,
             type: 'DebuggingTargets'
         });
     }
 
     getDebuggingScripts() {
         return this._sendToContentScript({
-            id: this.idCounter,
             type: 'DebuggingScripts'
         });
     }
 
     debuggerAttach(targetId) {
         return this._sendToContentScript({
-            id: this.idCounter,
             type: 'DebuggerAttach',
             targetId: targetId
         });
@@ -107,7 +104,6 @@ class Lively4ChromeDebugger {
 
     debuggerDetach(targetId) {
         return this._sendToContentScript({
-            id: this.idCounter,
             type: 'DebuggerDetach',
             targetId: targetId
         });
@@ -115,7 +111,6 @@ class Lively4ChromeDebugger {
 
     debuggerSendCommand(targetId, method, params) {
         return this._sendToContentScript({
-            id: this.idCounter,
             type: 'DebuggerCommand',
             targetId: targetId,
             method: method,

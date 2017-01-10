@@ -1,5 +1,6 @@
 var portToContentScript, portToDevTools, portToPanel;
 var scripts = [];
+var lastAttachedTarget = null;
 
 function onDebuggerEvent(debuggeeId, method, params) {
     if (method == 'Debugger.paused') {
@@ -18,11 +19,13 @@ function onDebuggerPaused(debuggeeId, params) {
     });
 }
 
-function ensurePortVariable(portVariable, port) {
+function registerPort(portVariable, port, onMessageHandler, onDicsonnectCb) {
     if (!window[portVariable]) {
         window[portVariable] = port;
+        window[portVariable].onMessage.addListener(onMessageHandler);
         window[portVariable].onDisconnect.addListener(function(event) {
-            window[portVariable] = null;
+            window[portVariable] = undefined;
+            if (onDicsonnectCb) onDicsonnectCb();
         });
     }
 }
@@ -64,8 +67,8 @@ function handleDebuggingScriptsRequest(message) {
 
 function handleDebuggerAttachRequest(message) {
     scripts = []; // clear list of scripts
-    var target = { targetId: message.targetId };
-    chrome.debugger.attach(target, '1.2', () => {
+    lastAttachedTarget = { targetId: message.targetId };
+    chrome.debugger.attach(lastAttachedTarget, '1.2', () => {
         portToContentScript.postMessage({ id: message.id });
     });
 }
@@ -92,8 +95,7 @@ function handleDebuggerCommandRequest(message) {
 
 function onRuntimeConnect(port) {
     if (port.name == 'ContentScriptToBackground') {
-        ensurePortVariable('portToContentScript', port);
-        portToContentScript.onMessage.addListener(function (message, sender) {
+        registerPort('portToContentScript', port, (message, sender) => {
             if (message.type == 'EvalBackground') {
                 handleEvalRequest(message);
             } else if (message.type == 'SendToDevTools') {
@@ -121,15 +123,17 @@ function onRuntimeConnect(port) {
             } else {
                 console.warn('Unknown message:', message);
             }
+        }, () => {
+            if (lastAttachedTarget) {
+                chrome.debugger.detach(lastAttachedTarget);
+            }
         });
     } else if (port.name == 'DevToolsToBackground') {
-        ensurePortVariable('portToDevTools', port);
-        portToDevTools.onMessage.addListener(function (message, sender) {
+        registerPort('portToDevTools', port, (message, sender) => {
             portToContentScript.postMessage(message);
         });
     } else if (port.name == 'PanelToBackground') {
-        ensurePortVariable('portToPanel', port);
-        portToPanel.onMessage.addListener(function (message, sender) {
+        registerPort('portToPanel', port, (message, sender) => {
             portToContentScript.postMessage(message);
         });
     } else {

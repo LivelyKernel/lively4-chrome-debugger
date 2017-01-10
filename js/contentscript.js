@@ -2,14 +2,8 @@ class Lively4ContentScript {
     constructor() {
         this.injectScriptIntoWebsite();
         this.registerEventListeners();
-
-        this.portToBackground = chrome.runtime.connect({name: 'ContentScriptToBackground'});
-        this.portToBackground.onMessage.addListener(function (message, sender) {
-            var eventName = message.eventName || 'ResolveResult';
-            document.dispatchEvent(new CustomEvent(eventName, {
-                detail: message
-            }));
-        });
+        this.openPortToBackgroundPage();
+        
     }
 
     injectScriptIntoWebsite() {
@@ -39,6 +33,18 @@ class Lively4ContentScript {
                 this.portToBackground.postMessage(e.detail);
             }
         });
+    }
+
+    _dispatchMessage(message, sender) {
+        var eventName = message.eventName || 'ResolveResult';
+        document.dispatchEvent(new CustomEvent(eventName, {
+            detail: message
+        }));
+    }
+
+    openPortToBackgroundPage() {
+        this.portToBackground = chrome.runtime.connect({name: 'ContentScriptToBackground'});
+        this.portToBackground.onMessage.addListener(this._dispatchMessage);
     }
 }
 
