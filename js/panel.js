@@ -124,29 +124,8 @@ class Lively4Panel {
         }, 1000);
     }
 
-    initializeModules() {
-        evalInLively(() => {
-            return lively.modules.getPackages().map(
-                (ea) => ({name: ea.name, main: ea.main}));
-        }, (res) => {
-            let moduleList = document.getElementsByClassName('module-list');
-            for (let i = 0; i < moduleList.length; i++) {
-                moduleList[i].innerHTML = '';
-                moduleList[i].appendChild(this.modulesContent(res));
-            }
-        });
-    }
-
-    initializeTesting() {
-        var openSyncButton = document.getElementById('open-sync-window');
-        openSyncButton.addEventListener('click', function() {
-            evalInLively(() => lively.openComponentInWindow('lively-sync'));
-        });
-    }
-
     initializeFocalstorage() {
         this.asyncEvalInLively(() => {
-            var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB;
             return new Promise(function(resolve, reject) {
                 lively.focalStorage.keys().then((keys) => {
                     lively.focalStorage.getItems().then((values) => {
@@ -163,6 +142,35 @@ class Lively4Panel {
                 focalstorageItems[i].innerHTML = '';
                 focalstorageItems[i].appendChild(this.focalStorageContent(data.result));
             }
+        });
+    }
+
+    initializeModules() {
+        evalInLively(() => {
+            return Object.keys(System.loads).map(
+                (ea) => ({
+                    name: /[^/]*$/.exec(System.loads[ea].key)[0],
+                    deps: System.loads[ea].deps,
+                    registered: System.loads[ea].metadata.registered
+                })
+            );
+        }, (res) => {
+            let moduleList = document.getElementsByClassName('module-list');
+            for (let i = 0; i < moduleList.length; i++) {
+                moduleList[i].innerHTML = '';
+                moduleList[i].appendChild(this.modulesContent(res));
+            }
+        });
+    }
+
+    initializeTesting() {
+        var openWorspaceButton = document.getElementById('open-workspace');
+        openWorspaceButton.addEventListener('click', function() {
+            evalInLively(() => lively.openWorkspace(''));
+        });
+        var openSyncButton = document.getElementById('open-sync-window');
+        openSyncButton.addEventListener('click', function() {
+            evalInLively(() => lively.openComponentInWindow('lively-sync'));
         });
     }
 
@@ -232,7 +240,8 @@ class Lively4Panel {
         let thead = document.createElement('thead');
         let theadrow = document.createElement('tr');
         theadrow.appendChild(lively4Panel._newCell('Name'));
-        theadrow.appendChild(lively4Panel._newCell('Main file'));
+        theadrow.appendChild(lively4Panel._newCell('Registered'));
+        theadrow.appendChild(lively4Panel._newCell('Dependencies'));
         thead.appendChild(theadrow);
         table.appendChild(thead);
         let tbody = document.createElement('tbody');
@@ -240,7 +249,11 @@ class Lively4Panel {
             let row = document.createElement('tr');
             row.classList.add('table-row');
             row.appendChild(lively4Panel._newCell(module.name));
-            row.appendChild(lively4Panel._newCell(module.main));
+            row.appendChild(lively4Panel._newCell(module.registered));
+            var unique_deps = module.deps.filter(function(item, pos) {
+                return module.deps.indexOf(item) == pos;
+            });
+            row.appendChild(lively4Panel._newCell(unique_deps.join(', ')));
             tbody.appendChild(row);
         });
         table.appendChild(tbody);

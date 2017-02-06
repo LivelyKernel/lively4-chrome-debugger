@@ -60,6 +60,7 @@
 	position: absolute;
 	right: 0;
 	top: 0;
+    overflow-y: scroll;
 }
 
 .panel-table {
