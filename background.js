@@ -19,15 +19,13 @@ function onDebuggerPaused(debuggeeId, params) {
     });
 }
 
-function registerPort(portVariable, port, onMessageHandler, onDicsonnectCb) {
-    if (!window[portVariable]) {
-        window[portVariable] = port;
-        window[portVariable].onMessage.addListener(onMessageHandler);
-        window[portVariable].onDisconnect.addListener(function(event) {
-            window[portVariable] = undefined;
-            if (onDicsonnectCb) onDicsonnectCb();
-        });
-    }
+function registerPort(portVariable, port, onMessageHandler, onDisconnectCb) {
+    window[portVariable] = port;
+    window[portVariable].onMessage.addListener(onMessageHandler);
+    window[portVariable].onDisconnect.addListener(function(event) {
+        window[portVariable] = undefined;
+        if (onDisconnectCb) onDisconnectCb();
+    });
 }
 
 function handleEvalRequest(message) {
@@ -67,23 +65,20 @@ function handleDebuggingScriptsRequest(message) {
 
 function handleDebuggerAttachRequest(message) {
     scripts = []; // clear list of scripts
-    lastAttachedTarget = { targetId: message.targetId };
+    lastAttachedTarget = message.target;
     chrome.debugger.attach(lastAttachedTarget, '1.2', () => {
         portToContentScript.postMessage({ id: message.id });
     });
 }
 
 function handleDebuggerDetachRequest(message) {
-    chrome.debugger.detach({ targetId: message.targetId }, () => {
+    chrome.debugger.detach(message.target, () => {
         portToContentScript.postMessage({ id: message.id });
     });
 }
 
 function handleDebuggerCommandRequest(message) {
-    chrome.debugger.sendCommand(
-        { targetId: message.targetId },
-        message.method,
-        message.params,
+    chrome.debugger.sendCommand(message.target, message.method, message.params,
         (res) => {
             portToContentScript.postMessage({
                 id: message.id,
