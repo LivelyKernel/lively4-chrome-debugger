@@ -1,3 +1,5 @@
+const PROMISE_TIMEOUT = 5000;
+
 class Lively4ChromeDebugger {
 	constructor() {
 		this.lastResult = null;
@@ -11,61 +13,7 @@ class Lively4ChromeDebugger {
         document.addEventListener('AsyncEvalInLively', this._asyncEvalInLively.bind(this));
 	}
 
-    _resolveResult(e) {
-        var rId = e.detail.id;
-        if (rId in this.resolvers) {
-            var data = e.detail.result;
-            if (data && 'error' in data) {
-                this.rejecters[rId](data);
-            } else {
-                this.resolvers[rId](data);
-            }
-            delete this.rejecters[rId];
-            delete this.resolvers[rId];
-        } else {
-            console.warn('No resolver for:', e.detail);
-        }
-    }
-
-    _debuggerPaused(e) {
-        var debuggers = document.getElementsByTagName('lively-debugger');
-        for (var i = 0; i < debuggers.length; i++) {
-            debuggers[i].dispatchDebuggerPaused(e.detail.result);
-        }
-    }
-
-    _asyncEvalInLively(e) {
-        var message = e.detail;
-        eval('(' + message.code + ')()').then((res) => {
-            this._sendToContentScript({
-                id: message.id,
-                type: message.type,
-                result: {
-                    code: message.code,
-                    result: res
-                }
-            });
-        });
-    }
-
-    _sendToContentScript(data) {
-        return new Promise((resolve, reject) => {
-            this.idCounter++;
-            this.resolvers[this.idCounter] = resolve;
-            this.rejecters[this.idCounter] = reject;
-            data.id = this.idCounter;
-            document.dispatchEvent(new CustomEvent('SendToContentScript', {
-                detail: data
-            }));
-        });
-    }
-
-    _evalInContext(userCode, context) {
-        return this._sendToContentScript({
-            code: userCode,
-            type: context
-        });
-    }
+    /* Public Eval Functions */
 
     evalInContentScriptContext(userCode) {
         return this._evalInContext(userCode, 'EvalContentScript');
@@ -83,6 +31,14 @@ class Lively4ChromeDebugger {
         return this._evalInContext(userCode, 'SendToPanel');
     }
 
+    getCurrentTabId() {
+        return this.evalInBackgroundScriptContext(
+            'function() { return portToContentScript.sender.tab.id }')
+        .then((res) => { return parseInt(res.result); });
+    }
+
+    /* Debugger Interaction */
+
     getDebuggingTargets() {
         return this._sendToContentScript({
             type: 'DebuggingTargets'
@@ -95,27 +51,98 @@ class Lively4ChromeDebugger {
         });
     }
 
-    debuggerAttach(targetId) {
+    debuggerAttach(target) {
         return this._sendToContentScript({
             type: 'DebuggerAttach',
-            targetId: targetId
+            target: target
         });
     }
 
-    debuggerDetach(targetId) {
+    debuggerDetach(target) {
         return this._sendToContentScript({
             type: 'DebuggerDetach',
-            targetId: targetId
+            target: target
         });
     }
 
-    debuggerSendCommand(targetId, method, params) {
+    debuggerSendCommand(target, method, params) {
         return this._sendToContentScript({
             type: 'DebuggerCommand',
-            targetId: targetId,
+            target: target,
             method: method,
             params: params
         });
+    }
+
+    /* Communication handling */
+
+    _resolveResult(e) {
+        var promiseId = e.detail.id;
+        if (promiseId in this.resolvers) {
+            var data = e.detail.result;
+            if (data && 'error' in data) {
+                this.rejecters[promiseId](data);
+            } else {
+                this.resolvers[promiseId](data);
+            }
+            this._deleteRejecterResolverPair(promiseId);
+        } else {
+            console.warn('No resolver for:', e.detail);
+        }
+    }
+
+    _deleteRejecterResolverPair(promiseId) {
+        delete this.rejecters[promiseId];
+        delete this.resolvers[promiseId];
+    }
+
+    _sendToContentScript(data) {
+        return new Promise((resolve, reject) => {
+            this.idCounter++;
+            var promiseId = this.idCounter;
+            this.resolvers[promiseId] = resolve;
+            this.rejecters[promiseId] = reject;
+            setTimeout(() => {
+                if (promiseId in this.rejecters) {
+                    this.rejecters[promiseId]({'error': 'Promise timed out.'});
+                    this._deleteRejecterResolverPair(promiseId);
+                }
+            }, PROMISE_TIMEOUT);
+            data.id = promiseId;
+            document.dispatchEvent(new CustomEvent('SendToContentScript', {
+                detail: data
+            }));
+        });
+    }
+
+    /* Private helpers */
+
+    _evalInContext(userCode, context) {
+        return this._sendToContentScript({
+            code: userCode,
+            type: context
+        });
+    }
+
+    _asyncEvalInLively(e) {
+        var message = e.detail;
+        eval('(' + message.code + ')()').then((res) => {
+            this._sendToContentScript({
+                id: message.id,
+                type: message.type,
+                result: {
+                    code: message.code,
+                    result: res
+                }
+            });
+        });
+    }
+
+    _debuggerPaused(e) {
+        var debuggers = document.getElementsByTagName('lively-debugger');
+        for (var i = 0; i < debuggers.length; i++) {
+            debuggers[i].dispatchDebuggerPaused(e.detail.result);
+        }
     }
 }
 

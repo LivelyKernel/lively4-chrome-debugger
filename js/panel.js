@@ -1,3 +1,5 @@
+const PROMISE_TIMEOUT = 5000;
+
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 };
@@ -36,19 +38,44 @@ class Lively4Panel {
     }
 
     _resolveResult(message) {
-        var rId = message.id;
-        if (rId in this.resolvers) {
+        var promiseId = message.id;
+        if (promiseId in this.resolvers) {
             var data = message.result;
             if (data && 'error' in data) {
-                this.rejecters[rId](data);
+                this.rejecters[promiseId](data);
             } else {
-                this.resolvers[rId](data);
+                this.resolvers[promiseId](data);
             }
-            delete this.rejecters[rId];
-            delete this.resolvers[rId];
+            this._deleteRejecterResolverPair(promiseId);
         } else {
             console.warn('No resolver for:', message);
         }
+    }
+
+    _deleteRejecterResolverPair(promiseId) {
+        delete this.rejecters[promiseId];
+        delete this.resolvers[promiseId];
+    }
+
+    asyncEvalInLively(userFunction) {
+        return new Promise((resolve, reject) => {
+            this.idCounter++;
+            var promiseId = this.idCounter;
+            this.resolvers[promiseId] = resolve;
+            this.rejecters[promiseId] = reject;
+            setTimeout(() => {
+                if (promiseId in this.rejecters) {
+                    this.rejecters[promiseId]({'error': 'Promise timed out.'});
+                    this._deleteRejecterResolverPair(promiseId);
+                }
+            }, PROMISE_TIMEOUT);
+            this.portToBackground.postMessage({
+                id: promiseId,
+                code: userFunction.toString(),
+                type: 'SendToPanel', // send back to panel
+                eventName: 'AsyncEvalInLively'
+            });
+        });
     }
 
     _initializeTemplate(templateId) {
@@ -171,20 +198,6 @@ class Lively4Panel {
         var openSyncButton = document.getElementById('open-sync-window');
         openSyncButton.addEventListener('click', function() {
             evalInLively(() => lively.openComponentInWindow('lively-sync'));
-        });
-    }
-
-    asyncEvalInLively(userFunction) {
-        return new Promise((resolve, reject) => {
-            this.idCounter++;
-            this.resolvers[this.idCounter] = resolve;
-            this.rejecters[this.idCounter] = reject;
-            this.portToBackground.postMessage({
-                id: this.idCounter,
-                code: userFunction.toString(),
-                type: 'SendToPanel', // send back to panel
-                eventName: 'AsyncEvalInLively'
-            });
         });
     }
 
