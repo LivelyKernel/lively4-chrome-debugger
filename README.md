@@ -5,6 +5,14 @@ The Lively4 Chrome Debugger aims to provide an IDE like debugger for Lively4. It
 The main task of the object is to expose the chrome.debugger API and offer convenience methods for functions like getting all debuggable scripts or attaching the debugger to a page. Furthermore the object is able to send generic commands to the chrome API in order to access the whole range of functions available through the interface. Every call returns a Promise, that contains the execution result after the asynchronous request is finished.<br>
 The debugger can be accessed from the Lively4 context menu. After selecting a debuggee standard debugging buttons like step into and over are displayed. Any command can be executed automatically a chosen number of times with a given step speed. Additionally users can edit code live without reloading the page. Changes will be taken into account by the following statements. Besides the debugger offers a basic profiler. 
 
+## Installation Instructions
+1. Clone the repository
+2. Activate the developer mode in Google Chrome
+3. Click on "Load unpacked extension…" and choose the cloned folder (The extension should be loaded and active now)
+4. Reload the Lively4 page 
+4. 1. The extension exposes a *lively4ChromeDebugger* object
+4. 2. The debugger UI should be working
+
 ## Links
 - [Chrome Debugging Protocol Viewer][debugging_protocol]
 - [Message Passing in Chrome][message_passing]
