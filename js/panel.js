@@ -20,17 +20,22 @@ class Lively4Panel {
 
         // open port to background page, so that we can execute code in this context
         this.portToBackground = chrome.runtime.connect({name: 'PanelToBackground'});
-        this.portToBackground.onMessage.addListener((message) => {
+        this.portToBackground.onMessage.addListener((message, senderPort) => {
             if (message.result) {
                 this._resolveResult(message);
             } else if (message.code) {
-                this.portToBackground.postMessage({
+                senderPort.postMessage({
                     id: message.id,
+                    inspectedTabId: chrome.devtools.inspectedWindow.tabId,
                     result: {
                         code: message.code,
                         result: eval('(' + message.code + ')()')
                     }
                 });
+            } else if (message.requestType == 'GetInspectedTabId') {
+                message.inspectedTabId = chrome.devtools.inspectedWindow.tabId;
+                message.portType = 'Panel';
+                senderPort.postMessage(message);
             } else {
                 console.warn('Unhandled message:', message);
             }
@@ -71,8 +76,9 @@ class Lively4Panel {
             }, PROMISE_TIMEOUT);
             this.portToBackground.postMessage({
                 id: promiseId,
+                inspectedTabId: chrome.devtools.inspectedWindow.tabId,
                 code: userFunction.toString(),
-                type: 'SendToPanel', // send back to panel
+                requestType: 'SendToPanel', // send back to panel
                 eventName: 'AsyncEvalInLively'
             });
         });

@@ -27,7 +27,7 @@ class Lively4ContentScript {
 
     registerEventListeners() {
         document.addEventListener('SendToContentScript', (e) => {
-            if (e.detail.type == 'EvalContentScript') {
+            if (e.detail.requestType == 'EvalContentScript') {
                 this._eval(e.detail);
             } else { // forward everything else to background page
                 this.portToBackground.postMessage(e.detail);

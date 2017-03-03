@@ -24,14 +24,21 @@ class Lively4ChromeDebuggerExtension {
 
         // open port to background page, so that we can execute code in this context
         this.portToBackground = chrome.runtime.connect({name: 'DevToolsToBackground'});
-        this.portToBackground.onMessage.addListener((message) => {
-            this.portToBackground.postMessage({
-                id: message.id,
-                result: {
-                    code: message.code,
-                    result: eval('(' + message.code + ')()')
-                }
-            });
+        this.portToBackground.onMessage.addListener((message, senderPort) => {
+            if (message.requestType == 'GetInspectedTabId') {
+                message.inspectedTabId = chrome.devtools.inspectedWindow.tabId;
+                message.portType = 'DevTools';
+                senderPort.postMessage(message);
+            } else {
+                senderPort.postMessage({
+                    id: message.id,
+                    inspectedTabId: chrome.devtools.inspectedWindow.tabId,
+                    result: {
+                        code: message.code,
+                        result: eval('(' + message.code + ')()')
+                    }
+                });   
+            }
         });
     }
 }

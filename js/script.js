@@ -31,47 +31,52 @@ class Lively4ChromeDebugger {
         return this._evalInContext(userCode, 'SendToPanel');
     }
 
-    getCurrentTabId() {
-        return this.evalInBackgroundScriptContext(
-            'function() { return portToContentScript.sender.tab.id }')
-        .then((res) => { return parseInt(res.result); });
-    }
-
     /* Debugger Interaction */
 
     getDebuggingTargets() {
         return this._sendToContentScript({
-            type: 'DebuggingTargets'
+            requestType: 'DebuggingTargets'
+        });
+    }
+
+    getCurrentDebuggingTarget() {
+        return this._sendToContentScript({
+            requestType: 'GetCurrentDebuggingTarget'
         });
     }
 
     getDebuggingScripts() {
         return this._sendToContentScript({
-            type: 'DebuggingScripts'
+            requestType: 'DebuggingScripts'
         });
     }
 
     debuggerAttach(target) {
         return this._sendToContentScript({
-            type: 'DebuggerAttach',
+            requestType: 'DebuggerAttach',
             target: target
         });
     }
 
     debuggerDetach(target) {
         return this._sendToContentScript({
-            type: 'DebuggerDetach',
+            requestType: 'DebuggerDetach',
             target: target
         });
     }
 
     debuggerSendCommand(target, method, params) {
         return this._sendToContentScript({
-            type: 'DebuggerCommand',
+            requestType: 'DebuggerCommand',
             target: target,
             method: method,
             params: params
         });
+    }
+
+    createWindow(createData) {
+        createData.requestType = 'CreateWindow';
+        return this._sendToContentScript(createData);
     }
 
     /* Communication handling */
@@ -109,10 +114,14 @@ class Lively4ChromeDebugger {
                 }
             }, PROMISE_TIMEOUT);
             data.id = promiseId;
-            document.dispatchEvent(new CustomEvent('SendToContentScript', {
-                detail: data
-            }));
+            this._dispatchEventToContentScript(data);
         });
+    }
+
+    _dispatchEventToContentScript(data) {
+        document.dispatchEvent(new CustomEvent('SendToContentScript', {
+            detail: data
+        }));
     }
 
     /* Private helpers */
@@ -120,16 +129,17 @@ class Lively4ChromeDebugger {
     _evalInContext(userCode, context) {
         return this._sendToContentScript({
             code: userCode,
-            type: context
+            requestType: context
         });
     }
 
     _asyncEvalInLively(e) {
         var message = e.detail;
         eval('(' + message.code + ')()').then((res) => {
-            this._sendToContentScript({
+            // panel will not respond, no need to use a promise
+            this._dispatchEventToContentScript({
                 id: message.id,
-                type: message.type,
+                requestType: message.requestType,
                 result: {
                     code: message.code,
                     result: res
