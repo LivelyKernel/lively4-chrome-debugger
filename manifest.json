@@ -1,6 +1,6 @@
 {
   "name": "Chrome Debugger Extension for Lively4",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Debugging tools for the Lively4 programming environment.",
   "devtools_page": "devtools.html",
   "permissions": ["tabs", "<all_urls>", "debugger", "storage"],
