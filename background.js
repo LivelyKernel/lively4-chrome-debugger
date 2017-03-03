@@ -205,7 +205,6 @@ function onRuntimeConnect(port) {
                 }
                 return;
             }
-
             if (!('inspectedTabId' in message &&
                   message.inspectedTabId in portsToContentScripts)) {
                 console.warn('Unable to find port to content script.');

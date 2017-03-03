@@ -18,8 +18,10 @@ class Lively4Panel {
             lively4Panel.requestLog.push(request);
         });
 
-        // open port to background page, so that we can execute code in this context
-        this.portToBackground = chrome.runtime.connect({name: 'PanelToBackground'});
+        // open port to background page, so that code can be executed in context
+        this.portToBackground = chrome.runtime.connect({
+            name: 'PanelToBackground'
+        });
         this.portToBackground.onMessage.addListener((message, senderPort) => {
             if (message.result) {
                 this._resolveResult(message);
@@ -42,47 +44,7 @@ class Lively4Panel {
         });
     }
 
-    _resolveResult(message) {
-        var promiseId = message.id;
-        if (promiseId in this.resolvers) {
-            var data = message.result;
-            if (data && 'error' in data) {
-                this.rejecters[promiseId](data);
-            } else {
-                this.resolvers[promiseId](data);
-            }
-            this._deleteRejecterResolverPair(promiseId);
-        } else {
-            console.warn('No resolver for:', message);
-        }
-    }
-
-    _deleteRejecterResolverPair(promiseId) {
-        delete this.rejecters[promiseId];
-        delete this.resolvers[promiseId];
-    }
-
-    asyncEvalInLively(userFunction) {
-        return new Promise((resolve, reject) => {
-            this.idCounter++;
-            var promiseId = this.idCounter;
-            this.resolvers[promiseId] = resolve;
-            this.rejecters[promiseId] = reject;
-            setTimeout(() => {
-                if (promiseId in this.rejecters) {
-                    this.rejecters[promiseId]({'error': 'Promise timed out.'});
-                    this._deleteRejecterResolverPair(promiseId);
-                }
-            }, PROMISE_TIMEOUT);
-            this.portToBackground.postMessage({
-                id: promiseId,
-                inspectedTabId: chrome.devtools.inspectedWindow.tabId,
-                code: userFunction.toString(),
-                requestType: 'SendToPanel', // send back to panel
-                eventName: 'AsyncEvalInLively'
-            });
-        });
-    }
+    /* Initialization */
 
     _initializeTemplate(templateId) {
         var content = document.querySelector('#' + templateId + '-template');
@@ -104,8 +66,10 @@ class Lively4Panel {
 
         document.addEventListener('mousedown', function(event) {
             var barRect = bar.getBoundingClientRect();
-            if (barRect.top <= event.clientY && barRect.bottom >= event.clientY &&
-                barRect.left <= event.clientX && barRect.right >= event.clientX) {
+            if (barRect.top <= event.clientY &&
+                barRect.bottom >= event.clientY &&
+                barRect.left <= event.clientX &&
+                barRect.right >= event.clientX) {
                 moveMouse = true;
                 // Prevents unintented behavior for drag over
                 event.preventDefault();
@@ -115,7 +79,8 @@ class Lively4Panel {
         document.addEventListener('mousemove', function() {
             if (moveMouse) {
                 nav.style.width = event.clientX;
-                main.style.width = (document.body.clientWidth - parseInt(nav.style.width,10)) + 'px';
+                main.style.width = (document.body.clientWidth - parseInt(
+                    nav.style.width,10)) + 'px';
             }
         });
 
@@ -146,6 +111,52 @@ class Lively4Panel {
         this._initializeTemplate(initButton.id);
     }
 
+    /* Communication */
+
+    asyncEvalInLively(userFunction) {
+        return new Promise((resolve, reject) => {
+            this.idCounter++;
+            var promiseId = this.idCounter;
+            this.resolvers[promiseId] = resolve;
+            this.rejecters[promiseId] = reject;
+            setTimeout(() => {
+                if (promiseId in this.rejecters) {
+                    this.rejecters[promiseId]({'error': 'Promise timed out.'});
+                    this._deleteRejecterResolverPair(promiseId);
+                }
+            }, PROMISE_TIMEOUT);
+            this.portToBackground.postMessage({
+                id: promiseId,
+                inspectedTabId: chrome.devtools.inspectedWindow.tabId,
+                code: userFunction.toString(),
+                requestType: 'SendToPanel', // send back to panel
+                eventName: 'AsyncEvalInLively'
+            });
+        });
+    }
+
+    _resolveResult(message) {
+        var promiseId = message.id;
+        if (promiseId in this.resolvers) {
+            var data = message.result;
+            if (data && 'error' in data) {
+                this.rejecters[promiseId](data);
+            } else {
+                this.resolvers[promiseId](data);
+            }
+            this._deleteRejecterResolverPair(promiseId);
+        } else {
+            console.warn('No resolver for:', message);
+        }
+    }
+
+    _deleteRejecterResolverPair(promiseId) {
+        delete this.rejecters[promiseId];
+        delete this.resolvers[promiseId];
+    }
+
+    /* Page initializers */
+
     initializeNetwork() {
         if (this.requestLogInterval) return;
         this.requestLogInterval = setInterval(() => {
@@ -170,11 +181,15 @@ class Lively4Panel {
                 });
             });
         }).then((data) => {
-            let focalstorageItems = document.getElementsByClassName('focalstorage-data');
+            let focalstorageItems = document.getElementsByClassName(
+                'focalstorage-data');
             for (let i = 0; i < focalstorageItems.length; i++) {
                 focalstorageItems[i].innerHTML = '';
-                focalstorageItems[i].appendChild(this.focalStorageContent(data.result));
+                focalstorageItems[i].appendChild(
+                    this.focalStorageContent(data.result));
             }
+        }).catch((error) => {
+            alert('Unable to retrieve focalStorage items. Reload needed.');
         });
     }
 
@@ -197,8 +212,12 @@ class Lively4Panel {
     }
 
     initializeTesting() {
-        var openWorspaceButton = document.getElementById('open-workspace');
-        openWorspaceButton.addEventListener('click', function() {
+        var openDebuggerButton = document.getElementById('open-debugger');
+        openDebuggerButton.addEventListener('click', function() {
+            evalInLively(() => lively.openDebugger());
+        });
+        var openWorkspaceButton = document.getElementById('open-workspace');
+        openWorkspaceButton.addEventListener('click', function() {
             evalInLively(() => lively.openWorkspace(''));
         });
         var openSyncButton = document.getElementById('open-sync-window');
@@ -207,72 +226,69 @@ class Lively4Panel {
         });
     }
 
+    /* Content Generation */
+
     networkContent() {
-        let table = document.createElement('table');
-        table.classList.add('panel-table');
-        let thead = document.createElement('thead');
-        let theadrow = document.createElement('tr');
-        theadrow.appendChild(lively4Panel._newCell('URL'));
-        theadrow.appendChild(lively4Panel._newCell('Method'));
-        theadrow.appendChild(lively4Panel._newCell('Time'));
-        theadrow.appendChild(lively4Panel._newCell('Response Status'));
-        thead.appendChild(theadrow);
-        table.appendChild(thead);
-        let tbody = document.createElement('tbody');
-        this.requestLog.forEach(function(request) {
-            let row = document.createElement('tr');
-            row.classList.add('table-row');
-            row.appendChild(lively4Panel._newCell(request.request.url));
-            row.appendChild(lively4Panel._newCell(request.request.method));
-            row.appendChild(lively4Panel._newCell(Math.round(request.time) + 'ms'));
-            row.appendChild(lively4Panel._newCell(request.response.status));
-            tbody.appendChild(row);
-        });
-        table.appendChild(tbody);
-        return table;
+        return this._newTable(['URL', 'Method', 'Time', 'Response Status'],
+            () => {
+                var rowsAndCols = [];
+                this.requestLog.forEach((request) => {
+                    rowsAndCols.push([
+                        request.request.url,
+                        request.request.method,
+                        Math.round(request.time) + 'ms',
+                        request.response.status
+                    ]);
+                });
+                return rowsAndCols;
+            }
+        );
     }
 
     focalStorageContent(keyValues) {
-        let table = document.createElement('table');
-        table.classList.add('panel-table');
-        let thead = document.createElement('thead');
-        let theadrow = document.createElement('tr');
-        theadrow.appendChild(lively4Panel._newCell('Key'));
-        theadrow.appendChild(lively4Panel._newCell('Value'));
-        thead.appendChild(theadrow);
-        table.appendChild(thead);
-        let tbody = document.createElement('tbody');
-        keyValues.keys.forEach(function(key, index) {
-            let row = document.createElement('tr');
-            row.classList.add('table-row');
-            row.appendChild(lively4Panel._newCell(key));
-            row.appendChild(lively4Panel._newCell(keyValues.values[index]));
-            tbody.appendChild(row);
+        return this._newTable(['Key', 'Value'], () => {
+            var rowsAndCols = [];
+            keyValues.keys.forEach((key, index) => {
+                rowsAndCols.push([key, keyValues.values[index]]);
+            });
+            return rowsAndCols;
         });
-        table.appendChild(tbody);
-        return table;
     }
 
     modulesContent(modules) {
+        return this._newTable(['Name', 'Registered', 'Dependencies'], () => {
+            var rowsAndCols = [];
+            modules.forEach((module) => {
+                var unique_deps = module.deps.filter(function(item, pos) {
+                    return module.deps.indexOf(item) == pos;
+                });
+                rowsAndCols.push(
+                    [module.name, module.registered, unique_deps.join(', ')]);
+            });
+            return rowsAndCols;
+        });
+    }
+
+    /* Private helpers */
+
+    _newTable(theadList, dataFunction) {
         let table = document.createElement('table');
         table.classList.add('panel-table');
         let thead = document.createElement('thead');
         let theadrow = document.createElement('tr');
-        theadrow.appendChild(lively4Panel._newCell('Name'));
-        theadrow.appendChild(lively4Panel._newCell('Registered'));
-        theadrow.appendChild(lively4Panel._newCell('Dependencies'));
+        theadList.forEach(function(theadItem) {
+            theadrow.appendChild(lively4Panel._newCell(theadItem));
+        });
         thead.appendChild(theadrow);
         table.appendChild(thead);
         let tbody = document.createElement('tbody');
-        modules.forEach(function(module) {
+        var data = dataFunction();
+        data.forEach(function(rowItem) {
             let row = document.createElement('tr');
             row.classList.add('table-row');
-            row.appendChild(lively4Panel._newCell(module.name));
-            row.appendChild(lively4Panel._newCell(module.registered));
-            var unique_deps = module.deps.filter(function(item, pos) {
-                return module.deps.indexOf(item) == pos;
+            rowItem.forEach(function(colItem) {
+                row.appendChild(lively4Panel._newCell(colItem));
             });
-            row.appendChild(lively4Panel._newCell(unique_deps.join(', ')));
             tbody.appendChild(row);
         });
         table.appendChild(tbody);

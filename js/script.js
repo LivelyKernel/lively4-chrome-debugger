@@ -8,9 +8,12 @@ class Lively4ChromeDebugger {
         this.idCounter = 0;
         this.targets = [];
 
-        document.addEventListener('ResolveResult', this._resolveResult.bind(this));
-        document.addEventListener('DebuggerPaused', this._debuggerPaused.bind(this));
-        document.addEventListener('AsyncEvalInLively', this._asyncEvalInLively.bind(this));
+        document.addEventListener('ResolveResult',
+            this._resolveResult.bind(this));
+        document.addEventListener('DebuggerPaused',
+            this._debuggerPaused.bind(this));
+        document.addEventListener('AsyncEvalInLively',
+            this._asyncEvalInLively.bind(this));
 	}
 
     /* Public Eval Functions */

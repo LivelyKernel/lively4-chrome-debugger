@@ -13,6 +13,25 @@ class Lively4ContentScript {
         // script.onload = () => { script.remove() };
     }
 
+    registerEventListeners() {
+        document.addEventListener('SendToContentScript', (e) => {
+            if (e.detail.requestType == 'EvalContentScript') {
+                this._eval(e.detail);
+            } else { // forward everything else to background page
+                this.portToBackground.postMessage(e.detail);
+            }
+        });
+    }
+
+    openPortToBackgroundPage() {
+        this.portToBackground = chrome.runtime.connect({
+            name: 'ContentScriptToBackground'
+        });
+        this.portToBackground.onMessage.addListener(this._dispatchMessage);
+    }
+
+    /* Private helpers */
+
     _eval(message) {
         document.dispatchEvent(new CustomEvent('ResolveResult', {
             detail: {
@@ -25,26 +44,11 @@ class Lively4ContentScript {
         }));
     }
 
-    registerEventListeners() {
-        document.addEventListener('SendToContentScript', (e) => {
-            if (e.detail.requestType == 'EvalContentScript') {
-                this._eval(e.detail);
-            } else { // forward everything else to background page
-                this.portToBackground.postMessage(e.detail);
-            }
-        });
-    }
-
     _dispatchMessage(message, sender) {
         var eventName = message.eventName || 'ResolveResult';
         document.dispatchEvent(new CustomEvent(eventName, {
             detail: message
         }));
-    }
-
-    openPortToBackgroundPage() {
-        this.portToBackground = chrome.runtime.connect({name: 'ContentScriptToBackground'});
-        this.portToBackground.onMessage.addListener(this._dispatchMessage);
     }
 }
 

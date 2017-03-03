@@ -1,14 +1,17 @@
 class Lively4ChromeDebuggerExtension {
     constructor() {
-        this.panel = chrome.devtools.panels.create('Lively4', '/img/logo.png', '/panel.html');
+        this.panel = chrome.devtools.panels.create(
+            'Lively4', '/img/logo.png', '/panel.html');
 
-        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane('Lively4 Windows', function(sidebar) {
+        this.sidebarPane = chrome.devtools.panels.elements.createSidebarPane(
+                'Lively4 Windows', function(sidebar) {
             var windows = function() {
-                return Array.from(document.querySelectorAll('lively-window')).map((ea) => ({
-                    name: ea.getAttribute('title'),
-                    offsetLeft: ea.offsetLeft,
-                    offsetTop: ea.offsetTop
-                }));
+                return Array.from(document.querySelectorAll('lively-window'))
+                    .map((ea) => ({
+                        name: ea.getAttribute('title'),
+                        offsetLeft: ea.offsetLeft,
+                        offsetTop: ea.offsetTop
+                    }));
             };
             evalInLively(windows, (result, isException) => {
                 var data;
@@ -22,8 +25,10 @@ class Lively4ChromeDebuggerExtension {
             });
         });
 
-        // open port to background page, so that we can execute code in this context
-        this.portToBackground = chrome.runtime.connect({name: 'DevToolsToBackground'});
+        // open port to background page, so that code can be executed in context
+        this.portToBackground = chrome.runtime.connect({
+            name: 'DevToolsToBackground'
+        });
         this.portToBackground.onMessage.addListener((message, senderPort) => {
             if (message.requestType == 'GetInspectedTabId') {
                 message.inspectedTabId = chrome.devtools.inspectedWindow.tabId;
@@ -43,7 +48,7 @@ class Lively4ChromeDebuggerExtension {
     }
 }
 
-/* global chrome */
+/* Global Chrome */
 var lively4ChromeDebuggerExtension = null;
 var checkForLively4Interval = setInterval(function() {
     createPanelIfLivelyPageFound();

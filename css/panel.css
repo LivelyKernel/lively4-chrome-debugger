@@ -63,6 +63,10 @@
     overflow-y: scroll;
 }
 
+#main > button {
+    margin: 10px;
+}
+
 .panel-table {
     font-size: 12px;
     border-spacing: 0;
