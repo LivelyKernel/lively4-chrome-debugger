@@ -10,8 +10,8 @@ The debugger can be accessed from the Lively4 context menu. After selecting a de
 2. Activate the developer mode in Google Chrome
 3. Click on "Load unpacked extension…" and choose the cloned folder (The extension should be loaded and active now)
 4. Reload the Lively4 page 
-4. 1. The extension exposes a *lively4ChromeDebugger* object
-4. 2. The debugger UI should be working
+  * The extension exposes a *lively4ChromeDebugger* object
+  * The debugger UI should be working
 
 ## Links
 - [Chrome Debugging Protocol Viewer][debugging_protocol]
