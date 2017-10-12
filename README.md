@@ -49,3 +49,4 @@ Lastly, the debugger also provides access to Chrome's profiler.
 [debugging_protocol]: https://chromedevtools.github.io/debugger-protocol-viewer/1-2/Debugger/
 [message_passing]: https://developer.chrome.com/extensions/messaging
 [script_context]: http://stackoverflow.com/a/9916089
+[chrome_store]: https://chrome.google.com/webstore/developer/dashboard
