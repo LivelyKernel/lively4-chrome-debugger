@@ -45,9 +45,10 @@ Lastly, the debugger also provides access to Chrome's profiler.
 - [Message Passing in Chrome][message_passing]
 - [Context of different scripts][script_context] (Explains the different aspects
   of every context available in a chrome extension)
-- [Chrome Store](https://chrome.google.com/webstore/developer/dashboard)
+- [Chrome Store][chrome_store]
 
 
 [debugging_protocol]: https://chromedevtools.github.io/debugger-protocol-viewer/1-2/Debugger/
 [message_passing]: https://developer.chrome.com/extensions/messaging
 [script_context]: http://stackoverflow.com/a/9916089
+[chrome_store]: https://chrome.google.com/webstore/developer/dashboard
